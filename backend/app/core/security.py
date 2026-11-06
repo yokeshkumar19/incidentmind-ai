@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Union
 import bcrypt
@@ -49,6 +50,11 @@ def decode_access_token(token: str) -> Optional[dict]:
         return payload
     except (jwt.PyJWTError, Exception):
         return None
+
+
+def generate_password_reset_code() -> str:
+    """Generates an intuitive 6-digit verification OTP code (e.g. 482915)."""
+    return f"{secrets.randbelow(900000) + 100000}"
 
 
 def create_password_reset_token(email: str, user_id: str) -> str:

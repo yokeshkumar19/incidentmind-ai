@@ -40,3 +40,4 @@ services:
         value: IncidentMind AI <onboarding@resend.dev>
       - key: SECRET_KEY
         generateValue: true
+

@@ -154,9 +154,12 @@ class EmailService:
               <div style="text-align: center;">
                 <a href="{reset_link}" class="btn">Reset My Password &rarr;</a>
               </div>
-              <p style="font-size: 13px; color: #4B5563;">Or paste this reset code directly into the app:</p>
-              <div class="code-box">{reset_token}</div>
-              <p style="font-size: 12px; color: #6B7280;">This link is valid for 15 minutes. If you did not initiate this request, you can safely disregard this email.</p>
+              <p style="font-size: 13px; color: #4B5563; text-align: center; margin-bottom: 8px;">Or enter this 6-digit verification code directly on the reset screen:</p>
+              <div style="background: #F8FAFC; border: 2px dashed #171717; border-radius: 14px; padding: 16px 20px; text-align: center; margin: 15px auto; max-width: 280px;">
+                <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #64748B; margin-bottom: 4px;">6-Digit Reset Code</div>
+                <div style="font-family: 'Courier New', Courier, monospace; font-size: 32px; font-weight: 900; letter-spacing: 8px; color: #0F172A;">{reset_token}</div>
+              </div>
+              <p style="font-size: 12px; color: #6B7280; text-align: center; margin-top: 15px;">This code expires in 15 minutes. If you did not initiate this request, you can safely disregard this email.</p>
             </div>
             <div class="footer">
               IncidentMind AI &middot; Reliability Command & Organizational Memory

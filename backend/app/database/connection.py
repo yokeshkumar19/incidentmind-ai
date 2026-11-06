@@ -1,6 +1,6 @@
 from typing import Generator
 import logging
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from backend.app.core.config import settings
 
@@ -42,5 +42,21 @@ def get_db() -> Generator[Session, None, None]:
 def init_db() -> None:
     # Auto-creates all tables in Supabase PostgreSQL or SQLite if they do not exist
     Base.metadata.create_all(bind=engine)
+    
+    # Safe auto-migration for newly added columns
+    try:
+        with engine.connect() as conn:
+            for col, col_type in [
+                ("reset_code", "VARCHAR(32)"),
+                ("reset_code_expires_at", "TIMESTAMP WITH TIME ZONE"),
+            ]:
+                try:
+                    conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {col_type}"))
+                    conn.commit()
+                except Exception:
+                    pass
+    except Exception as e:
+        logger.warning(f"Schema migration check notice: {e}")
+
     logger.info("Database schemas initialized successfully.")
 

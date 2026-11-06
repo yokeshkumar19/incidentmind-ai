@@ -342,15 +342,16 @@ export function Login() {
           {mode === "reset" && (
             <form onSubmit={handleResetPassword} className="space-y-4">
               <div>
-                <label className="label">Reset Code / Token *</label>
+                <label className="label">6-Digit Reset Code *</label>
                 <div className="relative">
                   <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 opacity-35" size={17} />
                   <input
-                    className="field pl-11 font-mono text-xs"
+                    className="field pl-11 font-mono tracking-widest text-base font-bold placeholder:tracking-normal placeholder:font-sans placeholder:text-xs"
                     type="text"
                     value={resetToken}
                     onChange={(e) => setResetToken(e.target.value)}
-                    placeholder="Paste code from email"
+                    placeholder="Enter 6-digit code (e.g. 482915)"
+                    maxLength={100}
                     required
                   />
                 </div>

@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -5,6 +7,7 @@ from backend.app.core.security import (
     create_access_token,
     create_password_reset_token,
     verify_password_reset_token,
+    generate_password_reset_code,
     get_password_hash,
     verify_password,
 )
@@ -94,17 +97,22 @@ def get_me(current_user: User = Depends(get_current_user)):
 def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
     """
     POST /api/auth/forgot-password
-    Generates a secure 15-minute reset token and emails the password reset instructions.
+    Generates a secure, user-friendly 6-digit verification code and sends it via email.
     """
     email_clean = req.email.strip().lower()
     user = db.query(User).filter(User.email.ilike(email_clean)).first()
     if user:
-        token = create_password_reset_token(user.email, user.id)
-        reset_link = f"{settings.APP_URL}/login?reset_token={token}&email={user.email}"
+        # Generate intuitive 6-digit reset code
+        code = generate_password_reset_code()
+        user.reset_code = code
+        user.reset_code_expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
+        db.commit()
+
+        reset_link = f"{settings.APP_URL}/login?reset_token={code}&email={user.email}"
         email_service.send_password_reset(
             to_email=user.email,
             user_name=user.name,
-            reset_token=token,
+            reset_token=code,
             reset_link=reset_link,
         )
 
@@ -117,24 +125,40 @@ def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
 def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):
     """
     POST /api/auth/reset-password
-    Verifies the reset token and updates the user's password.
+    Verifies the 6-digit code or JWT token and updates the user's password.
     """
-    payload = verify_password_reset_token(req.token)
-    if not payload or not payload.get("sub"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="The password reset link is invalid or has expired. Please request a new one."
-        )
+    token_clean = req.token.strip().replace(" ", "")
+    now_utc = datetime.now(timezone.utc)
+    user: Optional[User] = None
 
-    user_id = payload["sub"]
-    user = db.query(User).filter(User.id == user_id).first()
+    # 1. First check by 6-digit reset code
+    query = db.query(User).filter(User.reset_code == token_clean)
+    if req.email:
+        query = query.filter(User.email.ilike(req.email.strip().lower()))
+    found_user = query.first()
+
+    if found_user:
+        if found_user.reset_code_expires_at and found_user.reset_code_expires_at.replace(tzinfo=timezone.utc) < now_utc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The 6-digit reset code has expired. Please request a new one."
+            )
+        user = found_user
+    else:
+        # 2. Fallback check for JWT token (backward compatibility)
+        payload = verify_password_reset_token(req.token)
+        if payload and payload.get("sub"):
+            user = db.query(User).filter(User.id == payload["sub"]).first()
+
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User account not found."
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The reset code is invalid or has expired. Please check your email or request a new code."
         )
 
     user.password_hash = get_password_hash(req.new_password)
+    user.reset_code = None
+    user.reset_code_expires_at = None
     db.commit()
 
     return MessageResponse(
