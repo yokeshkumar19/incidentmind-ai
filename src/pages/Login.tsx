@@ -152,10 +152,10 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFF7E8] text-[#171717] dark:bg-[#0B0F19] dark:text-[#F3F4F6] flex flex-col justify-center px-4 py-6 sm:py-10 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#FFF7E8] text-[#171717] dark:bg-[#0B0F19] dark:text-[#F3F4F6] flex flex-col justify-center px-4 py-4 sm:py-6 lg:py-8">
       <div className="mx-auto w-full max-w-5xl grid gap-6 lg:gap-8 lg:grid-cols-2 items-center">
         {/* Left Side: Brand Visual & Architectural Pillars */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-5">
           <div className="flex items-center gap-3">
             <span className="grid size-12 sm:size-14 rotate-3 place-items-center rounded-2xl bg-[#FF5A1F] text-white shadow-xl">
               <BrainCircuit size={30} />
@@ -170,14 +170,14 @@ export function Login() {
             </div>
           </div>
 
-          <div className="panel bg-[#3155E7] text-white p-6 sm:p-8 space-y-4">
+          <div className="panel bg-[#3155E7] text-white p-5 sm:p-6 space-y-3">
             <div className="flex items-center gap-2">
-              <Sparkles className="text-[#D6FF45]" size={22} />
+              <Sparkles className="text-[#D6FF45]" size={20} />
               <span className="text-xs font-black uppercase tracking-wider text-[#D6FF45]">
                 Continuous Reliability
               </span>
             </div>
-            <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-black leading-tight">
+            <h2 className="font-display text-2xl sm:text-3xl font-black leading-tight">
               Every incident teaches. Every recovery endures.
             </h2>
             <p className="text-sm text-white/80 leading-relaxed font-medium">
@@ -185,26 +185,26 @@ export function Login() {
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="panel p-4 flex items-start gap-3">
-              <span className="grid size-9 place-items-center rounded-xl bg-[#FF5A1F]/15 text-[#FF5A1F] shrink-0">
-                <Zap size={18} />
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            <div className="panel p-3.5 flex items-start gap-3">
+              <span className="grid size-8 place-items-center rounded-xl bg-[#FF5A1F]/15 text-[#FF5A1F] shrink-0">
+                <Zap size={16} />
               </span>
               <div>
-                <b className="text-sm block">Groq AI Reasoning</b>
-                <small className="opacity-60 leading-5 block mt-0.5">
-                  Deep LLM root-cause investigation powered by openai/gpt-oss-120b.
+                <b className="text-xs sm:text-sm block">Groq AI Reasoning</b>
+                <small className="opacity-60 text-xs leading-4 block mt-0.5">
+                  Deep LLM root-cause investigation.
                 </small>
               </div>
             </div>
-            <div className="panel p-4 flex items-start gap-3">
-              <span className="grid size-9 place-items-center rounded-xl bg-[#6428C8]/15 text-[#6428C8] shrink-0">
-                <Database size={18} />
+            <div className="panel p-3.5 flex items-start gap-3">
+              <span className="grid size-8 place-items-center rounded-xl bg-[#6428C8]/15 text-[#6428C8] shrink-0">
+                <Database size={16} />
               </span>
               <div>
-                <b className="text-sm block">Hindsight Memory</b>
-                <small className="opacity-60 leading-5 block mt-0.5">
-                  Persistent organizational memory bank for continuous learning.
+                <b className="text-xs sm:text-sm block">Hindsight Memory</b>
+                <small className="opacity-60 text-xs leading-4 block mt-0.5">
+                  Persistent organizational memory bank.
                 </small>
               </div>
             </div>
@@ -212,9 +212,9 @@ export function Login() {
         </div>
 
         {/* Right Side: Auth Form Panel */}
-        <div className="panel bg-white/90 dark:bg-[#111827]/90 p-6 sm:p-8 md:p-10 shadow-2xl relative border-2 border-black dark:border-white/20">
+        <div className="panel bg-white/90 dark:bg-[#111827]/90 p-5 sm:p-7 md:p-8 shadow-2xl relative border-2 border-black dark:border-white/20">
           {/* Header & Mode Switcher */}
-          <div className="mb-6">
+          <div className="mb-4 sm:mb-5">
             <div className="flex items-center justify-between">
               <p className="eyebrow">
                 {mode === "register"
@@ -415,7 +415,7 @@ export function Login() {
 
           {/* LOGIN / REGISTER FORM */}
           {(mode === "register" || mode === "login") && (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3">
               {mode === "register" && (
                 <div>
                   <label className="label">Name *</label>
@@ -488,7 +488,7 @@ export function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="btn-primary w-full justify-center py-4 text-sm mt-5"
+                className="btn-primary w-full justify-center py-3 text-sm mt-4"
               >
                 {loading ? "Authenticating..." : mode === "register" ? "Get Started" : "Sign In"}
                 <ArrowRight size={17} />
@@ -497,16 +497,16 @@ export function Login() {
           )}
 
           {/* Prominent Guest Option at the Bottom */}
-          <div className="mt-8 border-t-2 border-black/10 dark:border-white/10 pt-6">
+          <div className="mt-5 border-t-2 border-black/10 dark:border-white/10 pt-4">
             <button
               type="button"
               onClick={handleGuestEntry}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-black/30 dark:border-white/30 py-3.5 px-4 text-sm font-black hover:border-black dark:hover:border-white hover:bg-black/5 dark:hover:bg-white/5 transition"
+              className="w-full flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-black/30 dark:border-white/30 py-3 px-4 text-sm font-black hover:border-black dark:hover:border-white hover:bg-black/5 dark:hover:bg-white/5 transition"
             >
               <span>Continue as Guest</span>
               <ArrowRight size={16} />
             </button>
-            <p className="text-[11px] text-center opacity-40 mt-2 font-medium">
+            <p className="text-[11px] text-center opacity-40 mt-1.5 font-medium">
               Explore the demo workspace without signing in
             </p>
           </div>

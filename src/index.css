@@ -66,6 +66,8 @@
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
   }
   body {
     min-width: 320px;
@@ -79,6 +81,8 @@
     overflow-x: hidden;
     touch-action: pan-x pan-y !important;
     overscroll-behavior-y: none;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
   }
   #root {
     width: 100%;
@@ -86,10 +90,22 @@
     min-height: 100vh;
     overflow-x: hidden;
     touch-action: pan-x pan-y !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
   }
-  /* Enforce unzoomable constraints on all descendants while keeping interactive elements responsive */
+  /* Enforce unzoomable constraints and hide all scrollbars across all descendants */
   *, *::before, *::after {
     touch-action: pan-x pan-y;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  /* Completely hide all scrollbars across WebKit and Chromium browsers */
+  ::-webkit-scrollbar,
+  *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
   }
   button, a, input, select, textarea, [role="button"] {
     touch-action: manipulation;

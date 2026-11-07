@@ -90,3 +90,4 @@ export function setupAntiZoom(): void {
   window.addEventListener("keydown", preventKeyboardZoom, { passive: false, capture: true });
   document.addEventListener("keydown", preventKeyboardZoom, { passive: false, capture: true });
 }
+

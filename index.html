@@ -11,6 +11,19 @@
     <meta name="theme-color" content="#FF5A1F" />
     <meta name="description" content="IncidentMind AI — Reliability Command & Organizational Memory Platform" />
     <title>IncidentMind AI — Reliability Command & Organizational Memory</title>
+    <style>
+      /* Immediately hide all scrollbars from first paint */
+      html, body, #root, * {
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+      }
+      ::-webkit-scrollbar, *::-webkit-scrollbar {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        background: transparent !important;
+      }
+    </style>
     <script>
       (function() {
         if (typeof window === 'undefined' || typeof document === 'undefined') return;
