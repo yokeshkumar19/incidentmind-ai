@@ -112,24 +112,29 @@ def forgot_password(
     try:
         email_clean = req.email.strip().lower()
         user = db.query(User).filter(User.email.ilike(email_clean)).first()
-        if user:
-            # Generate intuitive 6-digit reset code
-            code = generate_password_reset_code()
-            user.reset_code = code
-            user.reset_code_expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
-            db.commit()
-
-            reset_link = f"{settings.APP_URL}/login?reset_token={code}&email={user.email}"
-            
-            # Send email asynchronously in background so request returns instantly without SMTP timeout
-            background_tasks.add_task(
-                email_service.send_password_reset,
-                to_email=user.email,
-                user_name=user.name,
-                reset_token=code,
-                reset_link=reset_link,
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No account found registered with '{email_clean}'. Please check the email spelling or create an account first."
             )
-            logger.info(f"Password reset code {code} dispatched for {user.email}")
+
+        # Generate intuitive 6-digit reset code
+        code = generate_password_reset_code()
+        user.reset_code = code
+        user.reset_code_expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
+        db.commit()
+
+        reset_link = f"{settings.APP_URL}/login?reset_token={code}&email={user.email}"
+        
+        # Send email asynchronously in background so request returns instantly without SMTP timeout
+        background_tasks.add_task(
+            email_service.send_password_reset,
+            to_email=user.email,
+            user_name=user.name,
+            reset_token=code,
+            reset_link=reset_link,
+        )
+        logger.info(f"Password reset code {code} dispatched for {user.email}")
 
         return MessageResponse(
             message="Password reset instructions have been sent to your email inbox. Please check your inbox and spam folder."
