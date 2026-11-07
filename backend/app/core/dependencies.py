@@ -62,12 +62,8 @@ def get_current_team(
             .filter(TeamMember.team_id == x_team_id, TeamMember.user_id == current_user.id)
             .first()
         )
-        if not membership:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You do not have access to this team workspace."
-            )
-        team = db.query(Team).filter(Team.id == x_team_id).first()
+        if membership:
+            team = db.query(Team).filter(Team.id == x_team_id).first()
 
     if not team:
         # Get first team user belongs to

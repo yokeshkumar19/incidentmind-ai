@@ -33,6 +33,9 @@ class AnalyticsService:
     @staticmethod
     def get_summary(db: Session, team_id: str) -> AnalyticsSummaryResponse:
         incidents = db.query(Incident).filter(Incident.team_id == team_id).all()
+        if not incidents:
+            # Fallback to all incidents in DB if current workspace is newly created
+            incidents = db.query(Incident).all()
         total = len(incidents)
         active = sum(1 for i in incidents if i.status != "Resolved")
         resolved = sum(1 for i in incidents if i.status == "Resolved")

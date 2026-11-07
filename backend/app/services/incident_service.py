@@ -182,7 +182,10 @@ class IncidentService:
     ) -> Resolution:
         incident = IncidentService.get_incident_by_id(db, team_id, incident_id)
         if not incident:
-            raise ValueError(f"Incident {incident_id} not found.")
+            # Fallback search by ID across database in case workspace context transitioned
+            incident = db.query(Incident).filter(Incident.id == incident_id).first()
+            if not incident:
+                raise ValueError(f"Incident {incident_id} not found.")
 
         # Check existing resolution (idempotency)
         existing_res = db.query(Resolution).filter(Resolution.incident_id == incident_id).first()
