@@ -186,7 +186,7 @@ export function AppLayout() {
             )}
           </div>
         </header>
-        <main className="min-h-[calc(100vh-72px)] overflow-hidden p-4 sm:p-6 xl:p-8">
+        <main className="min-h-[calc(100vh-72px)] w-full max-w-[1600px] mx-auto p-4 sm:p-6 xl:p-8">
           <Outlet />
         </main>
       </div>

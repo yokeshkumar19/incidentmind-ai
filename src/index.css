@@ -60,14 +60,33 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    touch-action: manipulation;
+    width: 100%;
+    overflow-x: hidden;
   }
   body {
     min-width: 320px;
+    width: 100%;
     min-height: 100vh;
     color: var(--text-primary);
     background: var(--page-bg);
     font-family: "DM Sans", sans-serif;
     text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+    touch-action: manipulation;
+  }
+  #root {
+    width: 100%;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  /* Prevent mobile Safari and Chrome from auto-zooming in when focusing inputs */
+  @media screen and (max-width: 768px) {
+    input, select, textarea, .field {
+      font-size: 16px !important;
+    }
   }
   .dark body {
     color: var(--text-primary);
