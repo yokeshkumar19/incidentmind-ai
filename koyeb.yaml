@@ -1,0 +1,27 @@
+name: incidentmind-backend
+services:
+  - name: api
+    type: web
+    git:
+      repository: github.com/yokeshkumar19/incidentmind-ai
+      branch: master
+    dockerfile: Dockerfile
+    instance_type: nano
+    regions:
+      - fra
+    ports:
+      - port: 8000
+        path: /
+        protocol: http
+    routes:
+      - path: /
+        port: 8000
+    env:
+      PORT: "8000"
+      ENVIRONMENT: "production"
+      SMTP_HOST: "smtp.gmail.com"
+      SMTP_PORT: "587"
+      SMTP_USER: "yokeshkumar192007@gmail.com"
+      SMTP_FROM_EMAIL: "IncidentMind AI <yokeshkumar192007@gmail.com>"
+      APP_URL: "https://incidentmind-ai-alpha.vercel.app"
+
