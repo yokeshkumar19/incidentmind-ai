@@ -3,13 +3,30 @@
  * Connects React Frontend to FastAPI Backend
  */
 
-export const API_BASE_URL =
-  (import.meta as any).env?.VITE_API_URL ||
-  (typeof window !== "undefined"
-    ? window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-      ? `${window.location.protocol}//${window.location.hostname}:8000/api`
-      : `${window.location.origin}/api`
-    : "http://localhost:8000/api");
+function resolveApiBaseUrl(): string {
+  const envUrl = (import.meta as any).env?.VITE_API_URL;
+  if (envUrl && typeof envUrl === "string" && envUrl.trim()) {
+    let clean = envUrl.trim().replace(/\/+$/, "");
+    if (!clean.endsWith("/api")) {
+      clean = `${clean}/api`;
+    }
+    return clean;
+  }
+
+  if (typeof window !== "undefined") {
+    const isLocal =
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
+    if (isLocal) {
+      return `${window.location.protocol}//${window.location.hostname}:8000/api`;
+    }
+    return `${window.location.origin}/api`;
+  }
+
+  return "http://localhost:8000/api";
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
 
 class ApiClient {
   private getHeaders(): Record<string, string> {

@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from backend.app.api import api_router
+from backend.app.api.auth import router as auth_router
 from backend.app.core.config import settings
 from backend.app.core.security import get_password_hash
 from backend.app.database.connection import init_db, SessionLocal
@@ -109,6 +110,7 @@ app.add_middleware(
 
 # Mount API routers
 app.include_router(api_router, prefix="/api")
+app.include_router(auth_router, prefix="/auth", tags=["Authentication (Direct)"])
 
 
 @app.get("/health", tags=["Health"])

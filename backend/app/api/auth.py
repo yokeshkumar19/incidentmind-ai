@@ -33,6 +33,7 @@ router = APIRouter()
 
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
+@router.post("/register/", response_model=Token, status_code=status.HTTP_201_CREATED)
 def register(user_in: UserCreate, db: Session = Depends(get_db)):
     """Registers a new user and provisions their personal workspace."""
     email_clean = user_in.email.strip().lower()
@@ -76,6 +77,7 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=Token)
+@router.post("/login/", response_model=Token)
 def login(credentials: UserLogin, db: Session = Depends(get_db)):
     """Authenticates a user and returns a JWT token."""
     email_clean = credentials.email.strip().lower()
@@ -97,6 +99,7 @@ def get_me(current_user: User = Depends(get_current_user)):
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
+@router.post("/forgot-password/", response_model=MessageResponse)
 def forgot_password(
     req: ForgotPasswordRequest,
     background_tasks: BackgroundTasks,
@@ -141,6 +144,7 @@ def forgot_password(
 
 
 @router.post("/reset-password", response_model=MessageResponse)
+@router.post("/reset-password/", response_model=MessageResponse)
 def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):
     """
     POST /api/auth/reset-password
