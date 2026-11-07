@@ -28,20 +28,29 @@ class EmailService:
             msg.attach(part1)
             msg.attach(part2)
 
-            if settings.SMTP_PORT == 465:
-                server = smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10)
-            else:
-                server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10)
-                if settings.SMTP_USE_TLS:
-                    server.starttls()
+            ports_to_try = [465, 587] if settings.SMTP_PORT == 465 else [settings.SMTP_PORT, 465, 587]
+            ports_to_try = list(dict.fromkeys(ports_to_try))
 
-            if settings.SMTP_PASSWORD:
-                server.login(settings.SMTP_USER, settings.SMTP_PASSWORD.replace(" ", ""))
+            for port in ports_to_try:
+                try:
+                    if port == 465:
+                        server = smtplib.SMTP_SSL(settings.SMTP_HOST, 465, timeout=7)
+                    else:
+                        server = smtplib.SMTP(settings.SMTP_HOST, port, timeout=7)
+                        if settings.SMTP_USE_TLS:
+                            server.starttls()
 
-            server.sendmail(settings.SMTP_FROM_EMAIL, [to_email], msg.as_string())
-            server.quit()
-            logger.info(f"Email successfully delivered to {to_email} via SMTP.")
-            return True
+                    if settings.SMTP_PASSWORD:
+                        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD.replace(" ", ""))
+
+                    server.sendmail(settings.SMTP_FROM_EMAIL, [to_email], msg.as_string())
+                    server.quit()
+                    logger.info(f"Email successfully delivered to {to_email} via SMTP on port {port}.")
+                    return True
+                except Exception as port_err:
+                    logger.warning(f"SMTP attempt on port {port} failed: {port_err}")
+
+            return False
         except Exception as e:
             logger.error(f"SMTP delivery failed to {to_email}: {e}")
             return False
@@ -92,13 +101,13 @@ class EmailService:
     @classmethod
     def send_email(cls, to_email: str, subject: str, html_content: str, text_content: str) -> dict:
         """Dispatches an email via Resend, SMTP, or fallback to server console logger."""
-        # 1. Try Resend
-        if settings.RESEND_API_KEY and cls._send_via_resend(to_email, subject, html_content):
-            return {"status": "sent", "channel": "resend", "recipient": to_email}
-
-        # 2. Try SMTP
+        # 1. First try direct SMTP (e.g. Gmail) via SSL port 465 or TLS port 587
         if settings.SMTP_HOST and cls._send_via_smtp(to_email, subject, html_content, text_content):
             return {"status": "sent", "channel": "smtp", "recipient": to_email}
+
+        # 2. Fall back to Resend HTTP API
+        if settings.RESEND_API_KEY and cls._send_via_resend(to_email, subject, html_content):
+            return {"status": "sent", "channel": "resend", "recipient": to_email}
 
         # 3. Development / Sandbox fallback logger
         logger.info(

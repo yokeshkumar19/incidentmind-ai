@@ -244,25 +244,31 @@ def test_email(to: str = "yokeshkumar192007@gmail.com"):
         except Exception as e:
             results["resend_error"] = str(e)
 
-    # Direct SMTP probe to capture raw socket exceptions if any
+    # Direct SMTP probe: Port 465 (SSL)
     try:
-        if settings.SMTP_PORT == 465:
-            server = smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10)
-        else:
-            server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10)
-            if settings.SMTP_USE_TLS:
-                server.starttls()
+        server465 = smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=7)
         if settings.SMTP_PASSWORD:
-            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD.replace(" ", ""))
-        msg = MIMEText(f"IncidentMind AI live verification test delivered to {to}.")
+            server465.login(settings.SMTP_USER, settings.SMTP_PASSWORD.replace(" ", ""))
+        msg = MIMEText(f"IncidentMind AI live verification test delivered via port 465 to {to}.")
         msg["Subject"] = "IncidentMind AI — Email Verification Test"
         msg["From"] = settings.SMTP_FROM_EMAIL or settings.SMTP_USER
         msg["To"] = to
-        server.sendmail(settings.SMTP_FROM_EMAIL or settings.SMTP_USER, [to], msg.as_string())
-        server.quit()
-        results["direct_smtp"] = "SUCCESS: Delivered to inbox!"
+        server465.sendmail(settings.SMTP_FROM_EMAIL or settings.SMTP_USER, [to], msg.as_string())
+        server465.quit()
+        results["port_465_ssl"] = "SUCCESS: Delivered via Gmail port 465!"
     except Exception as e:
-        results["direct_smtp_error"] = f"{type(e).__name__}: {str(e)}"
+        results["port_465_ssl_error"] = f"{type(e).__name__}: {str(e)}"
+
+    # Direct SMTP probe: Port 587 (TLS)
+    try:
+        server587 = smtplib.SMTP("smtp.gmail.com", 587, timeout=7)
+        server587.starttls()
+        if settings.SMTP_PASSWORD:
+            server587.login(settings.SMTP_USER, settings.SMTP_PASSWORD.replace(" ", ""))
+        server587.quit()
+        results["port_587_tls"] = "SUCCESS: Port 587 reachable!"
+    except Exception as e:
+        results["port_587_tls_error"] = f"{type(e).__name__}: {str(e)}"
 
     return results
 
