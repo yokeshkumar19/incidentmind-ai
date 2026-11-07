@@ -112,7 +112,6 @@ def forgot_password(
     try:
         email_clean = req.email.strip().lower()
         user = db.query(User).filter(User.email.ilike(email_clean)).first()
-        code_hint = ""
         if user:
             # Generate intuitive 6-digit reset code
             code = generate_password_reset_code()
@@ -131,10 +130,9 @@ def forgot_password(
                 reset_link=reset_link,
             )
             logger.info(f"Password reset code {code} dispatched for {user.email}")
-            code_hint = f" (Your 6-digit reset code: {code})"
 
         return MessageResponse(
-            message=f"Password reset instructions have been sent to your email inbox.{code_hint}"
+            message="Password reset instructions have been sent to your email inbox. Please check your inbox and spam folder."
         )
     except Exception as e:
         logger.error(f"Error in forgot_password: {e}", exc_info=True)
@@ -193,4 +191,52 @@ def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):
     return MessageResponse(
         message="Your password has been successfully updated. You can now sign in with your new credentials."
     )
+
+
+@router.get("/test-email")
+def test_email(to: str = "yokeshkumar192007@gmail.com"):
+    """Diagnostic endpoint to test live email delivery and surface exact SMTP/Resend status."""
+    import smtplib
+    from email.mime.text import MIMEText
+
+    results = {
+        "SMTP_HOST": settings.SMTP_HOST,
+        "SMTP_PORT": settings.SMTP_PORT,
+        "SMTP_USER": settings.SMTP_USER,
+        "SMTP_PASSWORD_SET": bool(settings.SMTP_PASSWORD),
+        "SMTP_PASSWORD_LENGTH": len(settings.SMTP_PASSWORD) if settings.SMTP_PASSWORD else 0,
+        "RESEND_API_KEY_SET": bool(settings.RESEND_API_KEY),
+        "target": to,
+    }
+
+    # Test via email_service
+    res = email_service.send_password_reset(
+        to_email=to,
+        user_name="Yokesh Kumar",
+        reset_token="482915",
+        reset_link=f"{settings.APP_URL}/login?reset_token=482915&email={to}"
+    )
+    results["dispatch_result"] = res
+
+    # Direct SMTP probe to capture raw socket exceptions if any
+    try:
+        if settings.SMTP_PORT == 465:
+            server = smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10)
+        else:
+            server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10)
+            if settings.SMTP_USE_TLS:
+                server.starttls()
+        if settings.SMTP_PASSWORD:
+            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD.replace(" ", ""))
+        msg = MIMEText(f"IncidentMind AI live verification test delivered to {to}.")
+        msg["Subject"] = "IncidentMind AI — Email Verification Test"
+        msg["From"] = settings.SMTP_FROM_EMAIL or settings.SMTP_USER
+        msg["To"] = to
+        server.sendmail(settings.SMTP_FROM_EMAIL or settings.SMTP_USER, [to], msg.as_string())
+        server.quit()
+        results["direct_smtp"] = "SUCCESS: Delivered to inbox!"
+    except Exception as e:
+        results["direct_smtp_error"] = f"{type(e).__name__}: {str(e)}"
+
+    return results
 
