@@ -52,24 +52,6 @@ export function Login() {
     }
   }, [searchParams, toast]);
 
-  const handleQuickFill = async (userName: string, userEmail: string) => {
-    setName(userName);
-    setEmail(userEmail);
-    setPassword("incidentmind123");
-    setError(null);
-    setLoading(true);
-    try {
-      const loginRes = await api.auth.login({ email: userEmail, password: "incidentmind123" });
-      await loginUser(loginRes.access_token, loginRes.user);
-      toast(`Signed in as ${loginRes.user.name}`);
-      navigate("/");
-    } catch (err: any) {
-      setError(err.message || "Failed to log in with demo account.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleGuestEntry = () => {
     setAsGuest();
     toast("Welcome! Entered as Guest");
@@ -512,31 +494,6 @@ export function Login() {
                 <ArrowRight size={17} />
               </button>
             </form>
-          )}
-
-          {/* Quick Demo Pre-fill */}
-          {(mode === "register" || mode === "login") && (
-            <div className="mt-6 border-t border-black/10 dark:border-white/10 pt-4">
-              <p className="text-[11px] font-black uppercase tracking-wider opacity-45 mb-2">
-                Quick 1-Click Demo Accounts:
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill("Maya Chen", "maya@atlas.dev")}
-                  className="rounded-xl border border-black/15 bg-black/5 dark:bg-white/5 px-3 py-1.5 text-xs font-bold hover:bg-black/10 transition"
-                >
-                  Maya Chen (Admin)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill("Jon Bell", "jon@atlas.dev")}
-                  className="rounded-xl border border-black/15 bg-black/5 dark:bg-white/5 px-3 py-1.5 text-xs font-bold hover:bg-black/10 transition"
-                >
-                  Jon Bell (Engineer)
-                </button>
-              </div>
-            </div>
           )}
 
           {/* Prominent Guest Option at the Bottom */}
