@@ -152,16 +152,16 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFF7E8] text-[#171717] dark:bg-[#0B0F19] dark:text-[#F3F4F6] flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-5xl grid gap-8 lg:grid-cols-2 items-center">
+    <div className="min-h-screen bg-[#FFF7E8] text-[#171717] dark:bg-[#0B0F19] dark:text-[#F3F4F6] flex flex-col justify-center px-4 py-6 sm:py-10 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-5xl grid gap-6 lg:gap-8 lg:grid-cols-2 items-center">
         {/* Left Side: Brand Visual & Architectural Pillars */}
         <div className="space-y-6">
           <div className="flex items-center gap-3">
-            <span className="grid size-14 rotate-3 place-items-center rounded-2xl bg-[#FF5A1F] text-white shadow-xl">
-              <BrainCircuit size={32} />
+            <span className="grid size-12 sm:size-14 rotate-3 place-items-center rounded-2xl bg-[#FF5A1F] text-white shadow-xl">
+              <BrainCircuit size={30} />
             </span>
             <div>
-              <h1 className="font-display text-4xl font-black tracking-tight leading-none">
+              <h1 className="font-display text-3xl sm:text-4xl font-black tracking-tight leading-none">
                 IncidentMind
               </h1>
               <p className="text-xs font-black uppercase tracking-[.22em] text-[#FF5A1F] mt-1">
@@ -170,14 +170,14 @@ export function Login() {
             </div>
           </div>
 
-          <div className="panel bg-[#3155E7] text-white p-8 space-y-4">
+          <div className="panel bg-[#3155E7] text-white p-6 sm:p-8 space-y-4">
             <div className="flex items-center gap-2">
               <Sparkles className="text-[#D6FF45]" size={22} />
               <span className="text-xs font-black uppercase tracking-wider text-[#D6FF45]">
                 Continuous Reliability
               </span>
             </div>
-            <h2 className="font-display text-4xl font-black leading-tight">
+            <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-black leading-tight">
               Every incident teaches. Every recovery endures.
             </h2>
             <p className="text-sm text-white/80 leading-relaxed font-medium">
@@ -212,7 +212,7 @@ export function Login() {
         </div>
 
         {/* Right Side: Auth Form Panel */}
-        <div className="panel bg-white/90 dark:bg-[#111827]/90 p-8 sm:p-10 shadow-2xl relative border-2 border-black dark:border-white/20">
+        <div className="panel bg-white/90 dark:bg-[#111827]/90 p-6 sm:p-8 md:p-10 shadow-2xl relative border-2 border-black dark:border-white/20">
           {/* Header & Mode Switcher */}
           <div className="mb-6">
             <div className="flex items-center justify-between">
@@ -251,7 +251,7 @@ export function Login() {
                 </button>
               )}
             </div>
-            <h2 className="font-display text-3xl font-black mt-1">
+            <h2 className="font-display text-2xl sm:text-3xl font-black mt-1">
               {mode === "register"
                 ? "Enter IncidentMind AI"
                 : mode === "login"

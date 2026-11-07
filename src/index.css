@@ -62,25 +62,37 @@
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
-    touch-action: manipulation;
+    touch-action: pan-x pan-y !important;
     width: 100%;
+    max-width: 100%;
     overflow-x: hidden;
   }
   body {
     min-width: 320px;
     width: 100%;
+    max-width: 100%;
     min-height: 100vh;
     color: var(--text-primary);
     background: var(--page-bg);
     font-family: "DM Sans", sans-serif;
     text-rendering: optimizeLegibility;
     overflow-x: hidden;
-    touch-action: manipulation;
+    touch-action: pan-x pan-y !important;
+    overscroll-behavior-y: none;
   }
   #root {
     width: 100%;
+    max-width: 100%;
     min-height: 100vh;
     overflow-x: hidden;
+    touch-action: pan-x pan-y !important;
+  }
+  /* Enforce unzoomable constraints on all descendants while keeping interactive elements responsive */
+  *, *::before, *::after {
+    touch-action: pan-x pan-y;
+  }
+  button, a, input, select, textarea, [role="button"] {
+    touch-action: manipulation;
   }
   /* Prevent mobile Safari and Chrome from auto-zooming in when focusing inputs */
   @media screen and (max-width: 768px) {

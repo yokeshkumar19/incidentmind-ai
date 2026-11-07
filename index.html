@@ -6,9 +6,66 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover"
     />
+    <meta name="HandheldFriendly" content="true" />
+    <meta name="MobileOptimized" content="width" />
     <meta name="theme-color" content="#FF5A1F" />
     <meta name="description" content="IncidentMind AI — Reliability Command & Organizational Memory Platform" />
     <title>IncidentMind AI — Reliability Command & Organizational Memory</title>
+    <script>
+      (function() {
+        if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+        // 1. Block iOS Safari pinch gestures
+        var preventGesture = function(e) {
+          if (e.cancelable) e.preventDefault();
+        };
+        document.addEventListener('gesturestart', preventGesture, { passive: false, capture: true });
+        document.addEventListener('gesturechange', preventGesture, { passive: false, capture: true });
+        document.addEventListener('gestureend', preventGesture, { passive: false, capture: true });
+
+        // 2. Block mobile multi-touch pinch zoom
+        var preventTouchPinch = function(e) {
+          if (e.touches && e.touches.length > 1) {
+            if (e.cancelable) e.preventDefault();
+          }
+        };
+        document.addEventListener('touchstart', preventTouchPinch, { passive: false, capture: true });
+        document.addEventListener('touchmove', preventTouchPinch, { passive: false, capture: true });
+
+        // 3. Block mobile double tap zoom on non-inputs
+        var lastTouch = 0;
+        document.addEventListener('touchend', function(e) {
+          var now = Date.now();
+          var target = e.target;
+          var isInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT');
+          if (!isInput && now - lastTouch <= 300) {
+            if (e.cancelable) e.preventDefault();
+          }
+          lastTouch = now;
+        }, { passive: false, capture: true });
+
+        // 4. Block desktop trackpad pinch & Ctrl + Wheel zoom
+        var preventWheel = function(e) {
+          if (e.ctrlKey) {
+            if (e.cancelable) e.preventDefault();
+          }
+        };
+        window.addEventListener('wheel', preventWheel, { passive: false, capture: true });
+        document.addEventListener('wheel', preventWheel, { passive: false, capture: true });
+
+        // 5. Block desktop keyboard zoom
+        var preventKey = function(e) {
+          if (e.ctrlKey || e.metaKey) {
+            var k = e.key;
+            if (k === '+' || k === '-' || k === '=' || k === '_' || k === '0' || e.keyCode === 187 || e.keyCode === 189 || e.keyCode === 107 || e.keyCode === 109 || e.keyCode === 96 || e.keyCode === 48) {
+              if (e.cancelable) e.preventDefault();
+            }
+          }
+        };
+        window.addEventListener('keydown', preventKey, { passive: false, capture: true });
+        document.addEventListener('keydown', preventKey, { passive: false, capture: true });
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
