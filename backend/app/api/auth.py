@@ -212,6 +212,7 @@ def test_email(to: str = "yokeshkumar192007@gmail.com"):
         "SMTP_USER": settings.SMTP_USER,
         "SMTP_PASSWORD_SET": bool(settings.SMTP_PASSWORD),
         "SMTP_PASSWORD_LENGTH": len(settings.SMTP_PASSWORD) if settings.SMTP_PASSWORD else 0,
+        "BREVO_API_KEY_SET": bool(settings.BREVO_API_KEY),
         "RESEND_API_KEY_SET": bool(settings.RESEND_API_KEY),
         "target": to,
     }

@@ -161,27 +161,18 @@ class EmailService:
 
     @classmethod
     def send_email(cls, to_email: str, subject: str, html_content: str, text_content: str) -> dict:
-        """Dispatches an email via Google SMTP (direct or bridge), Brevo, Resend, or fallback."""
-        # 1. First try direct local SMTP if on localhost (ports 465/587 unblocked on localhost)
-        import os
-        if not os.getenv("RENDER") and settings.SMTP_HOST and cls._send_via_smtp(to_email, subject, html_content, text_content):
-            return {"status": "sent", "channel": "google_smtp_direct", "recipient": to_email}
-
-        # 2. On Render / Cloud: Route Google SMTP via Vercel HTTPS Bridge (Port 465 SSL to smtp.gmail.com)
-        if cls._send_via_google_bridge(to_email, subject, html_content, text_content):
-            return {"status": "sent", "channel": "google_smtp_bridge", "recipient": to_email}
-
-        # 3. Brevo HTTPS API fallback (supports any recipient worldwide)
+        """Dispatches an email via Brevo (HTTPS 443), direct Google SMTP, or Resend fallback."""
+        # 1. Primary: Brevo HTTPS API (port 443 - allowed on Render, delivers to ANY recipient worldwide)
         if settings.BREVO_API_KEY and cls._send_via_brevo(to_email, subject, html_content, text_content):
             return {"status": "sent", "channel": "brevo", "recipient": to_email}
 
-        # 4. Resend HTTPS API fallback
+        # 2. Direct Google SMTP via Port 587/465 (works on localhost or unblocked hosts)
+        if settings.SMTP_HOST and cls._send_via_smtp(to_email, subject, html_content, text_content):
+            return {"status": "sent", "channel": "google_smtp", "recipient": to_email}
+
+        # 3. Fallback: Resend HTTPS API
         if settings.RESEND_API_KEY and cls._send_via_resend(to_email, subject, html_content, text_content):
             return {"status": "sent", "channel": "resend", "recipient": to_email}
-
-        # 5. Direct SMTP retry
-        if settings.SMTP_HOST and cls._send_via_smtp(to_email, subject, html_content, text_content):
-            return {"status": "sent", "channel": "smtp", "recipient": to_email}
 
         # 3. Development / Sandbox fallback logger
         logger.info(
