@@ -56,6 +56,40 @@ class EmailService:
             return False
 
     @staticmethod
+    def _send_via_brevo(to_email: str, subject: str, html_content: str, text_content: Optional[str] = None) -> bool:
+        """Sends an email using Brevo (Sendinblue) HTTPS API (port 443). Supports sending to any recipient."""
+        if not settings.BREVO_API_KEY:
+            return False
+
+        try:
+            url = "https://api.brevo.com/v3/smtp/email"
+            headers = {
+                "api-key": settings.BREVO_API_KEY.strip(),
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+            from_sender_email = settings.BREVO_FROM_EMAIL or settings.SMTP_USER or "noreply@incidentmind.ai"
+            payload = {
+                "sender": {"name": "IncidentMind AI", "email": from_sender_email},
+                "to": [{"email": to_email}],
+                "subject": subject,
+                "htmlContent": html_content,
+            }
+            if text_content:
+                payload["textContent"] = text_content
+
+            with httpx.Client(timeout=10) as client:
+                res = client.post(url, headers=headers, json=payload)
+                if res.is_success:
+                    logger.info(f"Email delivered to {to_email} via Brevo.")
+                    return True
+                logger.warning(f"Brevo returned status {res.status_code}: {res.text}")
+                return False
+        except Exception as e:
+            logger.error(f"Brevo delivery failed to {to_email}: {e}")
+            return False
+
+    @staticmethod
     def _send_via_resend(to_email: str, subject: str, html_content: str, text_content: Optional[str] = None) -> bool:
         """Sends an email using Resend API if RESEND_API_KEY is configured."""
         if not settings.RESEND_API_KEY:
@@ -103,12 +137,16 @@ class EmailService:
 
     @classmethod
     def send_email(cls, to_email: str, subject: str, html_content: str, text_content: str) -> dict:
-        """Dispatches an email via Resend, SMTP, or fallback to server console logger."""
-        # 1. First try Resend HTTP API (HTTPS port 443 - works seamlessly on cloud providers like Render)
+        """Dispatches an email via Brevo, Resend, SMTP, or fallback to server console logger."""
+        # 1. First try Brevo HTTPS API (if configured - supports sending to ANY recipient worldwide)
+        if settings.BREVO_API_KEY and cls._send_via_brevo(to_email, subject, html_content, text_content):
+            return {"status": "sent", "channel": "brevo", "recipient": to_email}
+
+        # 2. Try Resend HTTP API (HTTPS port 443 - works in cloud environments)
         if settings.RESEND_API_KEY and cls._send_via_resend(to_email, subject, html_content, text_content):
             return {"status": "sent", "channel": "resend", "recipient": to_email}
 
-        # 2. Try direct SMTP (e.g. Gmail) via SSL port 465 or TLS port 587 (works on localhost)
+        # 3. Try direct SMTP (e.g. Gmail) via SSL port 465 or TLS port 587 (works on localhost)
         if settings.SMTP_HOST and cls._send_via_smtp(to_email, subject, html_content, text_content):
             return {"status": "sent", "channel": "smtp", "recipient": to_email}
 

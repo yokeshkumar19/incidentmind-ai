@@ -38,6 +38,8 @@ class Settings(BaseSettings):
     SMTP_USE_TLS: bool = True
     RESEND_API_KEY: str = ""
     RESEND_FROM_EMAIL: str = "IncidentMind AI <onboarding@resend.dev>"
+    BREVO_API_KEY: str = ""
+    BREVO_FROM_EMAIL: str = ""
     APP_URL: str = os.getenv("APP_URL", "https://incidentmind-ai-alpha.vercel.app")
 
     # CORS
