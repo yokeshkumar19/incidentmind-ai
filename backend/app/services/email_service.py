@@ -56,6 +56,30 @@ class EmailService:
             return False
 
     @staticmethod
+    def _send_via_google_bridge(to_email: str, subject: str, html_content: str, text_content: Optional[str] = None) -> bool:
+        """Dispatches an email via Google SMTP through the Vercel HTTPS Bridge (Port 465 SSL)."""
+        bridge_url = f"{settings.APP_URL.rstrip('/')}/api/smtp-bridge"
+        secret = os.getenv("SMTP_BRIDGE_SECRET", "incidentmind-internal-smtp-secret-key-999")
+        payload = {
+            "to": to_email,
+            "subject": subject,
+            "html": html_content,
+            "text": text_content,
+            "secret": secret,
+        }
+        try:
+            with httpx.Client(timeout=15) as client:
+                res = client.post(bridge_url, json=payload)
+                if res.is_success and res.json().get("success"):
+                    logger.info(f"Email successfully delivered to {to_email} via Google SMTP Bridge.")
+                    return True
+                logger.warning(f"Google SMTP Bridge returned {res.status_code}: {res.text}")
+                return False
+        except Exception as e:
+            logger.error(f"Google SMTP Bridge failed: {e}")
+            return False
+
+    @staticmethod
     def _send_via_brevo(to_email: str, subject: str, html_content: str, text_content: Optional[str] = None) -> bool:
         """Sends an email using Brevo (Sendinblue) HTTPS API (port 443). Supports sending to any recipient."""
         if not settings.BREVO_API_KEY:
@@ -137,16 +161,25 @@ class EmailService:
 
     @classmethod
     def send_email(cls, to_email: str, subject: str, html_content: str, text_content: str) -> dict:
-        """Dispatches an email via Brevo, Resend, SMTP, or fallback to server console logger."""
-        # 1. First try Brevo HTTPS API (if configured - supports sending to ANY recipient worldwide)
+        """Dispatches an email via Google SMTP (direct or bridge), Brevo, Resend, or fallback."""
+        # 1. First try direct local SMTP if on localhost (ports 465/587 unblocked on localhost)
+        import os
+        if not os.getenv("RENDER") and settings.SMTP_HOST and cls._send_via_smtp(to_email, subject, html_content, text_content):
+            return {"status": "sent", "channel": "google_smtp_direct", "recipient": to_email}
+
+        # 2. On Render / Cloud: Route Google SMTP via Vercel HTTPS Bridge (Port 465 SSL to smtp.gmail.com)
+        if cls._send_via_google_bridge(to_email, subject, html_content, text_content):
+            return {"status": "sent", "channel": "google_smtp_bridge", "recipient": to_email}
+
+        # 3. Brevo HTTPS API fallback (supports any recipient worldwide)
         if settings.BREVO_API_KEY and cls._send_via_brevo(to_email, subject, html_content, text_content):
             return {"status": "sent", "channel": "brevo", "recipient": to_email}
 
-        # 2. Try Resend HTTP API (HTTPS port 443 - works in cloud environments)
+        # 4. Resend HTTPS API fallback
         if settings.RESEND_API_KEY and cls._send_via_resend(to_email, subject, html_content, text_content):
             return {"status": "sent", "channel": "resend", "recipient": to_email}
 
-        # 3. Try direct SMTP (e.g. Gmail) via SSL port 465 or TLS port 587 (works on localhost)
+        # 5. Direct SMTP retry
         if settings.SMTP_HOST and cls._send_via_smtp(to_email, subject, html_content, text_content):
             return {"status": "sent", "channel": "smtp", "recipient": to_email}
 

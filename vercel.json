@@ -3,6 +3,14 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/api/smtp-bridge",
+      "destination": "/api/smtp-bridge.js"
+    },
+    {
+      "source": "/smtp-bridge",
+      "destination": "/api/smtp-bridge.js"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://incidentmind-ai-pgxr.onrender.com/api/:path*"
     },

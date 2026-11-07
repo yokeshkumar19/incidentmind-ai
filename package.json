@@ -10,8 +10,10 @@
     "format": "oxfmt"
   },
   "dependencies": {
+    "@types/nodemailer": "^8.0.2",
     "framer-motion": "^14.9.1",
     "lucide-react": "^1.70.0",
+    "nodemailer": "^10.3.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router": "^8.5.1",
