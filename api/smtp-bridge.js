@@ -10,11 +10,21 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
+  if (req.method === "GET") {
+    return res.status(200).json({ status: "ok", bridge: "Google SMTP Bridge is online" });
+  }
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed. Use POST." });
   }
 
-  const { to, subject, html, text, secret } = req.body || {};
+  let body = req.body;
+  if (typeof body === "string") {
+    try {
+      body = JSON.parse(body);
+    } catch (e) {}
+  }
+  const { to, subject, html, text, secret } = body || {};
 
   // Verify internal shared secret
   const expectedSecret = process.env.SMTP_BRIDGE_SECRET || "incidentmind-internal-smtp-secret-key-999";
