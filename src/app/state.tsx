@@ -16,6 +16,10 @@ type AppState = {
     logs: string;
   }) => Promise<string>;
   resolveIncident: (id: string, resolution: string, actualRootCause?: string) => Promise<void>;
+  deleteIncident: (id: string) => Promise<void>;
+  purgeIncidents: () => Promise<void>;
+  deleteWorkspace: (teamId: string) => Promise<void>;
+  leaveWorkspace: (teamId: string) => Promise<void>;
   theme: Theme;
   setTheme: (theme: Theme) => void;
   toast: (message: string) => void;
@@ -283,11 +287,84 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  const deleteIncident = useCallback(
+    async (id: string) => {
+      try {
+        await api.incidents.delete(id);
+      } catch (err) {
+        console.warn("Backend deleteIncident fallback to local state:", err);
+      }
+      setIncidents((items) => items.filter((item) => item.id !== id));
+      toast(`Incident ${id} deleted`);
+    },
+    [toast],
+  );
+
+  const purgeIncidents = useCallback(async () => {
+    try {
+      await api.incidents.purgeAll();
+    } catch (err) {
+      console.warn("Backend purgeIncidents fallback to local state:", err);
+    }
+    setIncidents([]);
+    toast("All incidents have been purged from workspace");
+  }, [toast]);
+
+  const leaveWorkspace = useCallback(
+    async (teamId: string) => {
+      try {
+        await api.teams.removeMember(currentUser?.id || "me");
+      } catch (err: any) {
+        console.warn("Backend leaveWorkspace error:", err);
+        throw err;
+      }
+      setUserTeams((teams) => teams.filter((t) => t.id !== teamId));
+      if (activeTeam?.id === teamId) {
+        const remaining = userTeams.filter((t) => t.id !== teamId);
+        setActiveTeam(remaining[0] || null);
+        if (remaining[0]) {
+          localStorage.setItem("incidentmind_team_id", remaining[0].id);
+        } else {
+          localStorage.removeItem("incidentmind_team_id");
+        }
+      }
+      toast("Left workspace successfully");
+    },
+    [activeTeam, currentUser, userTeams, toast],
+  );
+
+  const deleteWorkspace = useCallback(
+    async (teamId: string) => {
+      try {
+        await api.teams.deleteWorkspace(teamId);
+      } catch (err: any) {
+        console.warn("Backend deleteWorkspace error:", err);
+        throw err;
+      }
+      setUserTeams((teams) => teams.filter((t) => t.id !== teamId));
+      if (activeTeam?.id === teamId) {
+        const remaining = userTeams.filter((t) => t.id !== teamId);
+        setActiveTeam(remaining[0] || null);
+        if (remaining[0]) {
+          localStorage.setItem("incidentmind_team_id", remaining[0].id);
+        } else {
+          localStorage.removeItem("incidentmind_team_id");
+        }
+      }
+      toast("Workspace deleted successfully");
+    },
+    [activeTeam, userTeams, toast],
+  );
+
   const value = useMemo<AppState>(
     () => ({
       incidents,
       addIncident,
       resolveIncident,
+      deleteIncident,
+      purgeIncidents,
+      deleteWorkspace,
+      leaveWorkspace,
       theme,
       setTheme,
       toast,
@@ -311,6 +388,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       incidents,
       addIncident,
       resolveIncident,
+      deleteIncident,
+      purgeIncidents,
+      deleteWorkspace,
+      leaveWorkspace,
       theme,
       toast,
       toasts,

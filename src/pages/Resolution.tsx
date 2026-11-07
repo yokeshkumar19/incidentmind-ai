@@ -9,6 +9,7 @@ import {
   ThumbsDown,
   ThumbsUp,
   XCircle,
+  Trash2,
 } from "lucide-react";
 import { useApp } from "../app/state";
 import { Badge, PageHeader, severityStyles } from "../components/ui";
@@ -18,7 +19,7 @@ type Decision = "accepted" | "rejected" | null;
 
 export function Resolution() {
   const navigate = useNavigate();
-  const { incidents, resolveIncident, toast } = useApp();
+  const { incidents, resolveIncident, deleteIncident, toast } = useApp();
   const unresolved = incidents.filter((i) => i.status !== "Resolved");
   const [selectedId, setSelectedId] = useState(unresolved[0]?.id || incidents[0]?.id);
   const [decisions, setDecisions] = useState<Record<number, Decision>>({});
@@ -175,7 +176,22 @@ export function Resolution() {
                 </p>
                 <h2 className="mt-2 font-display text-3xl font-black">{incident.title}</h2>
               </div>
-              <Badge className={severityStyles[incident.severity]}>{incident.severity}</Badge>
+              <div className="flex items-center gap-2">
+                <Badge className={severityStyles[incident.severity]}>{incident.severity}</Badge>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm(`Are you sure you want to delete incident ${incident.id}?`)) {
+                      deleteIncident(incident.id);
+                    }
+                  }}
+                  className="rounded-xl border border-black/20 dark:border-white/20 hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/10 text-black/60 dark:text-white/60 hover:text-[#FF5A1F] px-2.5 py-1 text-xs font-bold flex items-center gap-1 transition"
+                  title={`Delete ${incident.id}`}
+                >
+                  <Trash2 size={13} />
+                  <span>Delete</span>
+                </button>
+              </div>
             </div>
           </article>
           <article className="panel">

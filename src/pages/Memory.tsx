@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { ArrowRight, BookOpen, CheckCircle2, GitBranch, Search, Sparkles, X, BrainCircuit, RefreshCw } from "lucide-react";
+import { ArrowRight, BookOpen, CheckCircle2, GitBranch, Search, Sparkles, X, BrainCircuit, RefreshCw, Trash2 } from "lucide-react";
 import { useApp } from "../app/state";
 import { Badge, EmptyState, PageHeader, severityStyles, Modal } from "../components/ui";
 import { api } from "../api/client";
@@ -85,6 +85,22 @@ export function Memory() {
       });
     } finally {
       setReflecting(false);
+    }
+  };
+
+  const handleDeleteMemory = async (id: string) => {
+    if (!window.confirm("Are you sure you want to forget and delete this memory from Hindsight? Future AI investigations will no longer recall this resolution.")) {
+      return;
+    }
+    try {
+      await api.memory.delete(id);
+      setServerMemories((prev) => prev.filter((m) => m.id !== id));
+      toast("Memory removed from Hindsight organizational bank");
+      setDetailOpen(false);
+    } catch (err: any) {
+      setServerMemories((prev) => prev.filter((m) => m.id !== id));
+      toast("Memory pruned locally");
+      setDetailOpen(false);
     }
   };
 
@@ -183,13 +199,27 @@ export function Memory() {
               <button
                 key={memory.id + i}
                 onClick={() => open(memory)}
-                className={`memory-card text-left ${selected?.id === memory.id && detailOpen ? "selected" : ""}`}
+                className={`memory-card text-left group ${selected?.id === memory.id && detailOpen ? "selected" : ""}`}
               >
                 <div className="flex items-center justify-between">
                   <Badge className={severityStyles[memory.severity as keyof typeof severityStyles] || severityStyles.Medium}>
                     {memory.severity || "Confirmed"}
                   </Badge>
-                  <span className="font-display text-4xl font-black opacity-10">0{i + 1}</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteMemory(memory.id);
+                      }}
+                      className="size-7 rounded-lg border border-black/10 dark:border-white/10 grid place-items-center opacity-70 sm:opacity-0 group-hover:opacity-100 hover:bg-[#FF5A1F]/10 hover:border-[#FF5A1F] text-black/40 hover:text-[#FF5A1F] transition"
+                      title={`Delete memory ${memory.id}`}
+                      aria-label={`Delete memory ${memory.id}`}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                    <span className="font-display text-4xl font-black opacity-10">0{i + 1}</span>
+                  </div>
                 </div>
                 <h2 className="mt-5 font-display text-2xl font-black leading-tight">
                   {memory.title}
@@ -242,6 +272,16 @@ export function Memory() {
             <div className="flex items-center gap-2 text-xs font-bold opacity-60">
               <CheckCircle2 size={16} className="text-[#2A8F72]" />
               <span>Available to Groq investigation engine during future incidents</span>
+            </div>
+            <div className="pt-3 border-t border-black/10 dark:border-white/10">
+              <button
+                type="button"
+                onClick={() => handleDeleteMemory(selected.id)}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border-2 border-[#FF5A1F]/30 hover:border-[#FF5A1F] bg-[#FF5A1F]/5 hover:bg-[#FF5A1F]/15 text-[#FF5A1F] font-bold text-xs transition"
+              >
+                <Trash2 size={14} />
+                <span>Forget & Delete from Memory</span>
+              </button>
             </div>
           </aside>
         )}

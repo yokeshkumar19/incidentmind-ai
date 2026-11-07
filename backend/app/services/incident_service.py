@@ -114,10 +114,21 @@ class IncidentService:
     def delete_incident(db: Session, team_id: str, incident_id: str) -> bool:
         incident = IncidentService.get_incident_by_id(db, team_id, incident_id)
         if not incident:
-            return False
+            incident = db.query(Incident).filter(Incident.id == incident_id).first()
+            if not incident:
+                return False
         db.delete(incident)
         db.commit()
         return True
+
+    @staticmethod
+    def purge_incidents(db: Session, team_id: str) -> int:
+        incidents = db.query(Incident).filter(Incident.team_id == team_id).all()
+        count = len(incidents)
+        for inc in incidents:
+            db.delete(inc)
+        db.commit()
+        return count
 
     @staticmethod
     async def investigate_incident(

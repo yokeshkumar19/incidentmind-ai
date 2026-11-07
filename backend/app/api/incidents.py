@@ -159,11 +159,25 @@ def update_incident(
     return _map_incident_response(incident, db)
 
 
+@router.delete("/purge/all")
+def purge_all_incidents(
+    current_team: Team = Depends(get_current_team),
+    _role=Depends(require_role(["Admin"])),
+    db: Session = Depends(get_db),
+):
+    """
+    DELETE /api/incidents/purge/all
+    Purges all test incidents from the active workspace (Admin only).
+    """
+    count = incident_service.purge_incidents(db, current_team.id)
+    return {"message": f"Successfully purged {count} incidents.", "count": count}
+
+
 @router.delete("/{incident_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_incident(
     incident_id: str,
     current_team: Team = Depends(get_current_team),
-    _role=Depends(require_role(["Admin"])),
+    _role=Depends(require_role(["Admin", "Engineer"])),
     db: Session = Depends(get_db),
 ):
     """

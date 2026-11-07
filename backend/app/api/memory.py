@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from backend.app.core.dependencies import get_current_user, get_current_team
@@ -114,4 +114,47 @@ async def reflect_on_memories(
         db=db,
     )
     return MemoryReflectResponse(**result)
+
+
+@router.delete("/{memory_id}")
+def delete_memory(
+    memory_id: str,
+    current_team: Team = Depends(get_current_team),
+    db: Session = Depends(get_db),
+):
+    """
+    DELETE /api/memory/{memory_id}
+    Deletes an organizational memory record from the database.
+    """
+    record = (
+        db.query(MemoryRecord)
+        .filter(
+            (MemoryRecord.id == memory_id)
+            | (MemoryRecord.incident_id == memory_id)
+            | (MemoryRecord.hindsight_memory_reference == memory_id),
+            MemoryRecord.team_id == current_team.id,
+        )
+        .first()
+    )
+    if not record:
+        # Fallback search without team_id
+        record = (
+            db.query(MemoryRecord)
+            .filter(
+                (MemoryRecord.id == memory_id)
+                | (MemoryRecord.incident_id == memory_id)
+                | (MemoryRecord.hindsight_memory_reference == memory_id)
+            )
+            .first()
+        )
+    if not record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Memory record not found.",
+        )
+
+    db.delete(record)
+    db.commit()
+    return {"message": "Memory record deleted successfully.", "status": "ok"}
+
 

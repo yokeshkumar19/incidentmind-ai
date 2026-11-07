@@ -22,6 +22,9 @@ import {
   ArrowRight,
   Shield,
   Mail,
+  Trash2,
+  AlertTriangle,
+  UserMinus,
 } from "lucide-react";
 import { useApp } from "../app/state";
 import { PageHeader } from "../components/ui";
@@ -41,6 +44,9 @@ export function Settings() {
     createTeam,
     joinTeam,
     switchTeam,
+    deleteWorkspace,
+    leaveWorkspace,
+    purgeIncidents,
     isGuest,
   } = useApp();
 
@@ -124,6 +130,44 @@ export function Settings() {
       // Toast notification is handled in joinTeam
     } finally {
       setJoiningTeam(false);
+    }
+  };
+
+  const handleDeleteWorkspace = async (teamId: string, teamName: string) => {
+    if (
+      window.confirm(
+        `Are you sure you want to permanently delete workspace "${teamName}"? All its incidents, memories, and team settings will be removed.`
+      )
+    ) {
+      try {
+        await deleteWorkspace(teamId);
+      } catch (err: any) {
+        toast(err.message || "Failed to delete workspace");
+      }
+    }
+  };
+
+  const handleLeaveWorkspace = async (teamId: string, teamName: string) => {
+    if (window.confirm(`Are you sure you want to leave workspace "${teamName}"?`)) {
+      try {
+        await leaveWorkspace(teamId);
+      } catch (err: any) {
+        toast(err.message || "Failed to leave workspace");
+      }
+    }
+  };
+
+  const handlePurgeIncidents = async () => {
+    if (
+      window.confirm(
+        "Are you sure you want to permanently purge all incidents from this workspace? All active and resolved incidents will be erased. This cannot be undone."
+      )
+    ) {
+      try {
+        await purgeIncidents();
+      } catch (err: any) {
+        toast(err.message || "Failed to purge incidents");
+      }
     }
   };
 
@@ -312,19 +356,42 @@ export function Settings() {
                                 {team.role || "Member"} · Code: {team.invite_code}
                               </small>
                             </div>
-                            {isActive ? (
-                              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#3155E7] text-white">
-                                Active
-                              </span>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => switchTeam(team.id)}
-                                className="text-xs font-bold px-3 py-1 rounded-xl border border-black/20 dark:border-white/20 hover:bg-black/5 dark:hover:bg-white/10 transition"
-                              >
-                                Switch
-                              </button>
-                            )}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {isActive ? (
+                                <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#3155E7] text-white">
+                                  Active
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => switchTeam(team.id)}
+                                  className="text-xs font-bold px-3 py-1 rounded-xl border border-black/20 dark:border-white/20 hover:bg-black/5 dark:hover:bg-white/10 transition"
+                                >
+                                  Switch
+                                </button>
+                              )}
+                              {team.role === "Admin" || team.created_by === currentUser?.id ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteWorkspace(team.id, team.name)}
+                                  className="size-7 rounded-xl border border-black/10 dark:border-white/10 grid place-items-center text-black/40 dark:text-white/40 hover:text-[#FF5A1F] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/10 transition"
+                                  title={`Delete workspace ${team.name}`}
+                                  aria-label={`Delete workspace ${team.name}`}
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleLeaveWorkspace(team.id, team.name)}
+                                  className="size-7 rounded-xl border border-black/10 dark:border-white/10 grid place-items-center text-black/40 dark:text-white/40 hover:text-[#FF5A1F] hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/10 transition"
+                                  title={`Leave workspace ${team.name}`}
+                                  aria-label={`Leave workspace ${team.name}`}
+                                >
+                                  <UserMinus size={13} />
+                                </button>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
@@ -402,6 +469,83 @@ export function Settings() {
                         <ArrowRight size={15} />
                       </button>
                     </form>
+                  </div>
+                </div>
+
+                {/* Danger Zone */}
+                <div className="mt-8 rounded-2xl border-2 border-[#FF5A1F]/30 bg-[#FF5A1F]/5 p-5 space-y-4">
+                  <div className="flex items-center gap-2 text-[#FF5A1F]">
+                    <AlertTriangle size={20} />
+                    <h4 className="font-display text-lg font-black leading-tight text-black dark:text-white">
+                      Danger Zone
+                    </h4>
+                  </div>
+                  <p className="text-xs opacity-60">
+                    Destructive operations that permanently alter or erase workspace telemetry and records.
+                  </p>
+
+                  <div className="divide-y divide-black/10 dark:divide-white/10 text-xs">
+                    {/* Purge Test Incidents */}
+                    <div className="py-3 flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <b className="block font-bold">Purge All Workspace Incidents</b>
+                        <span className="opacity-60 text-[11px]">
+                          Wipe all active and resolved incidents to start fresh with clean metrics.
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handlePurgeIncidents}
+                        className="rounded-xl border-2 border-[#FF5A1F] text-[#FF5A1F] hover:bg-[#FF5A1F] hover:text-white px-3 py-1.5 font-bold transition flex items-center gap-1.5 shadow-[2px_2px_0_#FF5A1F]"
+                      >
+                        <Trash2 size={13} />
+                        <span>Purge Incidents</span>
+                      </button>
+                    </div>
+
+                    {/* Delete Active Workspace */}
+                    {activeTeam && (activeTeam.role === "Admin" || activeTeam.created_by === currentUser?.id) && (
+                      <div className="py-3 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <b className="block font-bold">Delete Workspace "{activeTeam.name}"</b>
+                          <span className="opacity-60 text-[11px]">
+                            Permanently delete this workspace, including all its members and historical records.
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteWorkspace(activeTeam.id, activeTeam.name)}
+                          className="rounded-xl bg-[#FF5A1F] text-white hover:opacity-90 px-3 py-1.5 font-bold transition flex items-center gap-1.5 shadow-[2px_2px_0_#171717]"
+                        >
+                          <Trash2 size={13} />
+                          <span>Delete Workspace</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Reset Local Storage Cache */}
+                    <div className="py-3 flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <b className="block font-bold">Clear Local Cache & Session</b>
+                        <span className="opacity-60 text-[11px]">
+                          Reset offline storage tokens, draft incident cache, and local preferences.
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm("Clear all locally cached tokens and data? You will need to sign in again.")) {
+                            localStorage.clear();
+                            sessionStorage.clear();
+                            window.location.href = "/login";
+                          }
+                        }}
+                        className="rounded-xl border border-black/20 dark:border-white/20 hover:bg-black/10 dark:hover:bg-white/10 px-3 py-1.5 font-bold transition flex items-center gap-1.5"
+                      >
+                        <LogOut size={13} />
+                        <span>Clear & Reset</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

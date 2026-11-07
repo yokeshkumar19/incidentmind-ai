@@ -1,12 +1,12 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { Area, AreaChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { ArrowRight, Clock3, Flame, Layers3, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Clock3, Flame, Layers3, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
 import { useApp } from "../app/state";
 import { Badge, PageHeader, severityStyles, StatCard } from "../components/ui";
 
 export function Dashboard() {
-  const { incidents } = useApp();
+  const { incidents, deleteIncident } = useApp();
   const navigate = useNavigate();
   const [range, setRange] = useState("7 days");
 
@@ -275,21 +275,36 @@ export function Dashboard() {
               </div>
             ) : (
               active.slice(0, 4).map((incident) => (
-                <button
-                  key={incident.id}
-                  onClick={() => navigate("/investigation", { state: { incidentId: incident.id } })}
-                  className="incident-row"
-                >
-                  <span className="size-2.5 shrink-0 rounded-full animate-pulse bg-[#FF5A1F]" />
-                  <span className="min-w-0 flex-1">
-                    <strong className="block truncate text-sm">{incident.title}</strong>
-                    <small className="mt-0.5 block opacity-45">
-                      {incident.id} · {incident.service} · {incident.time}
-                    </small>
-                  </span>
-                  <Badge className={severityStyles[incident.severity]}>{incident.severity}</Badge>
-                  <ArrowRight size={16} />
-                </button>
+                <div key={incident.id} className="flex items-center gap-2 group">
+                  <button
+                    onClick={() => navigate("/investigation", { state: { incidentId: incident.id } })}
+                    className="incident-row flex-1"
+                  >
+                    <span className="size-2.5 shrink-0 rounded-full animate-pulse bg-[#FF5A1F]" />
+                    <span className="min-w-0 flex-1">
+                      <strong className="block truncate text-sm">{incident.title}</strong>
+                      <small className="mt-0.5 block opacity-45">
+                        {incident.id} · {incident.service} · {incident.time}
+                      </small>
+                    </span>
+                    <Badge className={severityStyles[incident.severity]}>{incident.severity}</Badge>
+                    <ArrowRight size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`Are you sure you want to delete incident ${incident.id}?`)) {
+                        deleteIncident(incident.id);
+                      }
+                    }}
+                    className="size-9 rounded-xl border border-black/10 dark:border-white/10 grid place-items-center opacity-70 sm:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-[#FF5A1F]/10 hover:border-[#FF5A1F] text-black/40 hover:text-[#FF5A1F] transition shrink-0"
+                    title={`Delete ${incident.id}`}
+                    aria-label={`Delete ${incident.id}`}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               ))
             )}
           </div>

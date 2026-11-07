@@ -110,6 +110,37 @@ def create_team(
     )
 
 
+@router.delete("/{team_id}")
+def delete_workspace(
+    team_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    DELETE /api/teams/{team_id}
+    Deletes a team workspace (Only the workspace creator or Admin).
+    """
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Workspace not found.")
+
+    membership = (
+        db.query(TeamMember)
+        .filter(TeamMember.team_id == team_id, TeamMember.user_id == current_user.id)
+        .first()
+    )
+    if team.created_by != current_user.id and (not membership or membership.role != "Admin"):
+        raise HTTPException(
+            status_code=403,
+            detail="Only the workspace creator can delete this workspace."
+        )
+
+    db.delete(team)
+    db.commit()
+    return {"message": f"Workspace '{team.name}' has been deleted.", "status": "ok"}
+
+
+
 @router.post("/join", response_model=TeamResponse)
 def join_team(
     join_in: TeamJoin,

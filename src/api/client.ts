@@ -130,6 +130,10 @@ class ApiClient {
       this.request<{ message: string; status: string }>(`/teams/members/${memberId}`, {
         method: "DELETE",
       }),
+    deleteWorkspace: (teamId: string) =>
+      this.request<{ message: string; status: string }>(`/teams/${teamId}`, {
+        method: "DELETE",
+      }),
   };
 
   // Incidents
@@ -163,6 +167,10 @@ class ApiClient {
       }),
     delete: (id: string) =>
       this.request<void>(`/incidents/${id}`, {
+        method: "DELETE",
+      }),
+    purgeAll: () =>
+      this.request<{ message: string; count: number }>("/incidents/purge/all", {
         method: "DELETE",
       }),
   };
@@ -235,6 +243,10 @@ class ApiClient {
       this.request<any>("/memory/reflect", {
         method: "POST",
         body: JSON.stringify({ query }),
+      }),
+    delete: (id: string) =>
+      this.request<{ message: string; status: string }>(`/memory/${id}`, {
+        method: "DELETE",
       }),
   };
 

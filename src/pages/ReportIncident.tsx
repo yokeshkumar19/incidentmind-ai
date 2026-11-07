@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { AlertTriangle, ArrowRight, Check, FileCode2, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, FileCode2, Sparkles, Trash2 } from "lucide-react";
 import { useApp } from "../app/state";
 import type { Severity } from "../data/demo";
 import { PageHeader } from "../components/ui";
@@ -193,9 +193,22 @@ export function ReportIncident() {
               Avoid secrets, access tokens, and personal data.
             </p>
           </div>
-          <button type="submit" className="btn-primary w-full justify-center py-4">
-            Submit incident <ArrowRight size={18} />
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setForm(initial);
+                setErrors({});
+                toast("Form draft discarded");
+              }}
+              className="btn-secondary px-5 py-4 text-xs font-black flex items-center justify-center gap-1.5"
+            >
+              <Trash2 size={16} /> Discard Draft
+            </button>
+            <button type="submit" className="btn-primary flex-1 justify-center py-4">
+              Submit incident <ArrowRight size={18} />
+            </button>
+          </div>
         </div>
         <aside className="space-y-5">
           <div className="panel rotate-1 bg-[#3155E7] text-white">

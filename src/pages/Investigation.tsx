@@ -17,13 +17,14 @@ import {
   Sparkles,
   ThumbsDown,
   ThumbsUp,
+  Trash2,
 } from "lucide-react";
 import { useApp } from "../app/state";
 import { Badge, PageHeader, severityStyles } from "../components/ui";
 import { api } from "../api/client";
 
 export function Investigation() {
-  const { incidents, toast, backendConnected } = useApp();
+  const { incidents, toast, backendConnected, deleteIncident } = useApp();
   const location = useLocation();
   const navigate = useNavigate();
   const requested = (location.state as { incidentId?: string } | null)?.incidentId;
@@ -84,6 +85,19 @@ export function Investigation() {
       }
     } else {
       toast(`Finding marked as ${type}`);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!incident) return;
+    if (window.confirm(`Are you sure you want to permanently delete incident ${incident.id}?`)) {
+      await deleteIncident(incident.id);
+      const remaining = incidents.filter((i) => i.id !== incident.id);
+      if (remaining.length > 0) {
+        setSelectedId(remaining[0].id);
+      } else {
+        navigate("/");
+      }
     }
   };
 
@@ -209,6 +223,23 @@ export function Investigation() {
         {investigation && (
           <Badge className="bg-[#2A8F72] text-white">● Analyzed by Groq</Badge>
         )}
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate("/resolution", { state: { incidentId: incident.id } })}
+            className="rounded-xl bg-[#3155E7] text-white hover:opacity-90 px-3 py-1.5 text-xs font-black flex items-center gap-1.5 transition shadow-[2px_2px_0_#171717]"
+          >
+            Go to Resolution <ArrowRight size={13} />
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="rounded-xl border-2 border-black/20 dark:border-white/20 hover:border-[#FF5A1F] hover:bg-[#FF5A1F]/10 text-black/60 dark:text-white/60 hover:text-[#FF5A1F] px-3 py-1.5 text-xs font-black flex items-center gap-1.5 transition"
+            title={`Delete ${incident.id}`}
+          >
+            <Trash2 size={13} /> Delete Incident
+          </button>
+        </div>
       </div>
       <section className="grid gap-5 xl:grid-cols-[1fr_330px]">
         <div className="space-y-5">
