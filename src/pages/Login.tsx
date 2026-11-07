@@ -340,47 +340,82 @@ export function Login() {
 
           {/* RESET PASSWORD FORM */}
           {mode === "reset" && (
-            <form onSubmit={handleResetPassword} className="space-y-4">
-              <div>
-                <label className="label">6-Digit Reset Code *</label>
-                <div className="relative">
-                  <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 opacity-35" size={17} />
-                  <input
-                    className="field pl-11 font-mono tracking-widest text-base font-bold placeholder:tracking-normal placeholder:font-sans placeholder:text-xs"
-                    type="text"
-                    value={resetToken}
-                    onChange={(e) => setResetToken(e.target.value)}
-                    placeholder="Enter 6-digit code (e.g. 482915)"
-                    maxLength={100}
-                    required
-                  />
+            <div className="space-y-4">
+              <div className="p-3.5 bg-amber-500/10 border-2 border-amber-500/30 rounded-xl text-xs space-y-1.5 text-amber-900 dark:text-amber-200">
+                <div className="font-bold flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
+                  <Mail size={14} /> Check your Inbox and Spam / Junk folder
                 </div>
+                <p className="opacity-90 leading-relaxed">
+                  We sent a 6-digit verification code to <strong>{email || "your email"}</strong>.
+                  If you don't see it in your Primary inbox, please check your <strong>Spam / Junk folder</strong> (look for email from <em>IncidentMind AI</em>).
+                </p>
               </div>
 
-              <div>
-                <label className="label">New Password *</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 opacity-35" size={17} />
-                  <input
-                    className="field pl-11"
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="At least 6 characters"
-                    required
-                  />
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                <div>
+                  <label className="label">6-Digit Reset Code *</label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 opacity-35" size={17} />
+                    <input
+                      className="field pl-11 font-mono tracking-widest text-base font-bold placeholder:tracking-normal placeholder:font-sans placeholder:text-xs"
+                      type="text"
+                      value={resetToken}
+                      onChange={(e) => setResetToken(e.target.value)}
+                      placeholder="Enter 6-digit code (e.g. 482915)"
+                      maxLength={100}
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn-primary w-full justify-center py-4 text-sm mt-3"
-              >
-                {loading ? "Updating..." : "Update Password & Sign In"}
-                <ArrowRight size={17} />
-              </button>
-            </form>
+                <div>
+                  <label className="label">New Password *</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 opacity-35" size={17} />
+                    <input
+                      className="field pl-11"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="At least 6 characters"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn-primary w-full justify-center py-4 text-sm mt-3"
+                >
+                  {loading ? "Updating..." : "Update Password & Sign In"}
+                  <ArrowRight size={17} />
+                </button>
+
+                <div className="flex items-center justify-between text-xs pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("forgot");
+                      setError(null);
+                    }}
+                    className="opacity-70 hover:opacity-100 underline"
+                  >
+                    Change Email / Resend
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("login");
+                      setError(null);
+                    }}
+                    className="opacity-70 hover:opacity-100 underline"
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              </form>
+            </div>
           )}
 
           {/* LOGIN / REGISTER FORM */}

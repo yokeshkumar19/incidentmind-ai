@@ -56,7 +56,7 @@ class EmailService:
             return False
 
     @staticmethod
-    def _send_via_resend(to_email: str, subject: str, html_content: str) -> bool:
+    def _send_via_resend(to_email: str, subject: str, html_content: str, text_content: Optional[str] = None) -> bool:
         """Sends an email using Resend API if RESEND_API_KEY is configured."""
         if not settings.RESEND_API_KEY:
             return False
@@ -75,6 +75,9 @@ class EmailService:
                 "subject": subject,
                 "html": html_content,
             }
+            if text_content:
+                payload["text"] = text_content
+
             with httpx.Client(timeout=10) as client:
                 res = client.post(url, headers=headers, json=payload)
                 if res.is_success:
@@ -101,13 +104,13 @@ class EmailService:
     @classmethod
     def send_email(cls, to_email: str, subject: str, html_content: str, text_content: str) -> dict:
         """Dispatches an email via Resend, SMTP, or fallback to server console logger."""
-        # 1. First try direct SMTP (e.g. Gmail) via SSL port 465 or TLS port 587
+        # 1. First try Resend HTTP API (HTTPS port 443 - works seamlessly on cloud providers like Render)
+        if settings.RESEND_API_KEY and cls._send_via_resend(to_email, subject, html_content, text_content):
+            return {"status": "sent", "channel": "resend", "recipient": to_email}
+
+        # 2. Try direct SMTP (e.g. Gmail) via SSL port 465 or TLS port 587 (works on localhost)
         if settings.SMTP_HOST and cls._send_via_smtp(to_email, subject, html_content, text_content):
             return {"status": "sent", "channel": "smtp", "recipient": to_email}
-
-        # 2. Fall back to Resend HTTP API
-        if settings.RESEND_API_KEY and cls._send_via_resend(to_email, subject, html_content):
-            return {"status": "sent", "channel": "resend", "recipient": to_email}
 
         # 3. Development / Sandbox fallback logger
         logger.info(
