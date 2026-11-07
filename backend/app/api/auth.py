@@ -1,7 +1,10 @@
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger("incidentmind.auth")
 
 from backend.app.core.security import (
     create_access_token,
@@ -94,31 +97,47 @@ def get_me(current_user: User = Depends(get_current_user)):
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
-def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
+def forgot_password(
+    req: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     """
     POST /api/auth/forgot-password
-    Generates a secure, user-friendly 6-digit verification code and sends it via email.
+    Generates a secure, user-friendly 6-digit verification code and sends it via email in the background.
     """
-    email_clean = req.email.strip().lower()
-    user = db.query(User).filter(User.email.ilike(email_clean)).first()
-    if user:
-        # Generate intuitive 6-digit reset code
-        code = generate_password_reset_code()
-        user.reset_code = code
-        user.reset_code_expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
-        db.commit()
+    try:
+        email_clean = req.email.strip().lower()
+        user = db.query(User).filter(User.email.ilike(email_clean)).first()
+        if user:
+            # Generate intuitive 6-digit reset code
+            code = generate_password_reset_code()
+            user.reset_code = code
+            user.reset_code_expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
+            db.commit()
 
-        reset_link = f"{settings.APP_URL}/login?reset_token={code}&email={user.email}"
-        email_service.send_password_reset(
-            to_email=user.email,
-            user_name=user.name,
-            reset_token=code,
-            reset_link=reset_link,
+            reset_link = f"{settings.APP_URL}/login?reset_token={code}&email={user.email}"
+            
+            # Send email asynchronously in background so request returns instantly without SMTP timeout
+            background_tasks.add_task(
+                email_service.send_password_reset,
+                to_email=user.email,
+                user_name=user.name,
+                reset_token=code,
+                reset_link=reset_link,
+            )
+            logger.info(f"Password reset code dispatched for {user.email}")
+
+        return MessageResponse(
+            message="If an account exists with this email address, password reset instructions have been sent to your inbox."
         )
-
-    return MessageResponse(
-        message="If an account exists with this email address, password reset instructions have been sent to your inbox."
-    )
+    except Exception as e:
+        logger.error(f"Error in forgot_password: {e}", exc_info=True)
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unable to process password reset request: {str(e)}"
+        )
 
 
 @router.post("/reset-password", response_model=MessageResponse)
@@ -138,11 +157,15 @@ def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):
     found_user = query.first()
 
     if found_user:
-        if found_user.reset_code_expires_at and found_user.reset_code_expires_at.replace(tzinfo=timezone.utc) < now_utc:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="The 6-digit reset code has expired. Please request a new one."
-            )
+        if found_user.reset_code_expires_at:
+            exp = found_user.reset_code_expires_at
+            if exp.tzinfo is None:
+                exp = exp.replace(tzinfo=timezone.utc)
+            if exp < now_utc:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="The 6-digit reset code has expired. Please request a new one."
+                )
         user = found_user
     else:
         # 2. Fallback check for JWT token (backward compatibility)

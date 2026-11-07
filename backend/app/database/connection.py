@@ -44,19 +44,26 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
     
     # Safe auto-migration for newly added columns
-    try:
-        with engine.connect() as conn:
-            for col, col_type in [
-                ("reset_code", "VARCHAR(32)"),
-                ("reset_code_expires_at", "TIMESTAMP WITH TIME ZONE"),
-            ]:
+    for col, col_type in [
+        ("reset_code", "VARCHAR(32)"),
+        ("reset_code_expires_at", "TIMESTAMP WITH TIME ZONE"),
+    ]:
+        try:
+            with engine.connect() as conn:
                 try:
-                    conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {col_type}"))
+                    # PostgreSQL syntax with IF NOT EXISTS
+                    conn.execute(text(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col} {col_type}"))
                     conn.commit()
                 except Exception:
-                    pass
-    except Exception as e:
-        logger.warning(f"Schema migration check notice: {e}")
+                    conn.rollback()
+                    try:
+                        # SQLite syntax (doesn't support IF NOT EXISTS on columns)
+                        conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {col_type}"))
+                        conn.commit()
+                    except Exception:
+                        conn.rollback()
+        except Exception as e:
+            logger.warning(f"Schema migration check for {col}: {e}")
 
     logger.info("Database schemas initialized successfully.")
 
