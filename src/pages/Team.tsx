@@ -1,5 +1,18 @@
 import { useState, useEffect, useMemo } from "react";
-import { Activity, Mail, MoreHorizontal, Plus, Shield, Users, Copy, Check, UserMinus } from "lucide-react";
+import {
+  Activity,
+  Mail,
+  MoreHorizontal,
+  Plus,
+  Shield,
+  Users,
+  Copy,
+  Check,
+  UserMinus,
+  Lock,
+  Crown,
+  Info,
+} from "lucide-react";
 import { members as defaultMembers } from "../data/demo";
 import { useApp } from "../app/state";
 import { Modal, PageHeader, StatCard } from "../components/ui";
@@ -12,10 +25,22 @@ export function Team() {
   const [teamMembers, setTeamMembers] = useState<any[]>(defaultMembers);
   const [activeMenuMember, setActiveMenuMember] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const { toast, activeTeam, incidents } = useApp();
+  const { toast, activeTeam, incidents, currentUser } = useApp();
 
   const resolved = useMemo(() => incidents.filter((i) => i.status === "Resolved"), [incidents]);
   const totalActions = incidents.length + resolved.length;
+
+  // The current user is a Team Leader if their role is Admin or they created the workspace
+  const isTeamLeader = useMemo(() => {
+    if (activeTeam?.role) {
+      return activeTeam.role === "Admin";
+    }
+    if (currentUser?.id && activeTeam?.created_by) {
+      return currentUser.id === activeTeam.created_by;
+    }
+    // Default to true in unauthenticated/demo workspace mode
+    return true;
+  }, [activeTeam, currentUser]);
 
   useEffect(() => {
     let active = true;
@@ -65,6 +90,10 @@ export function Team() {
   const members = teamMembers;
 
   const handleRoleChange = async (member: any, newRole: string) => {
+    if (!isTeamLeader) {
+      toast("Permission Denied: Only Team Leaders can change member roles.");
+      return;
+    }
     try {
       if (member.id) {
         await api.teams.updateRole(member.id, newRole);
@@ -80,6 +109,10 @@ export function Team() {
   };
 
   const handleRemoveMember = async (member: any) => {
+    if (!isTeamLeader) {
+      toast("Permission Denied: Only Team Leaders can remove members from the team.");
+      return;
+    }
     try {
       if (member.id) {
         await api.teams.removeMember(member.id);
@@ -212,56 +245,90 @@ export function Team() {
                       </button>
 
                       {activeMenuMember === member.name && (
-                        <div className="absolute right-0 top-11 z-30 w-56 rounded-2xl border-2 border-black bg-white p-2.5 shadow-[4px_4px_0_#171717] dark:border-white/20 dark:bg-[#111827] text-xs">
+                        <div className="absolute right-0 top-11 z-30 w-64 rounded-2xl border-2 border-black bg-white p-3 shadow-[4px_4px_0_#171717] dark:border-white/20 dark:bg-[#111827] text-xs">
                           {/* Member Role Header */}
-                          <div className="px-2 py-1.5 border-b border-black/10 dark:border-white/10 mb-1.5">
+                          <div className="px-1 py-1 border-b border-black/10 dark:border-white/10 pb-2 mb-2">
                             <span className="text-[10px] font-black uppercase tracking-wider text-black/50 dark:text-white/50 block">
-                              Workspace Role
+                              Member Profile
                             </span>
                             <div className="flex items-center gap-1.5 mt-1 font-bold text-sm text-[#3155E7] dark:text-[#60A5FA]">
-                              <Shield size={14} />
-                              <span>{member.role}</span>
+                              {member.role === "Admin" ? (
+                                <Crown size={15} className="text-[#FF5A1F]" />
+                              ) : (
+                                <Shield size={14} />
+                              )}
+                              <span>{member.role === "Admin" ? "Team Leader (Admin)" : member.role}</span>
                             </div>
                             {member.email && (
-                              <span className="text-[11px] opacity-60 truncate block mt-0.5">
+                              <span className="text-[11px] opacity-70 truncate block mt-1 font-mono">
                                 {member.email}
                               </span>
                             )}
-                          </div>
-
-                          {/* Role Switcher */}
-                          <div className="space-y-0.5">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-black/40 dark:text-white/40 px-2 py-0.5 block">
-                              Change Role
-                            </span>
-                            {(["Admin", "Engineer", "Viewer"] as const).map((r) => (
-                              <button
-                                key={r}
-                                type="button"
-                                onClick={() => handleRoleChange(member, r)}
-                                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl font-medium transition text-left ${
-                                  member.role === r
-                                    ? "bg-black/5 dark:bg-white/10 font-bold"
-                                    : "hover:bg-black/5 dark:hover:bg-white/5"
+                            <div className="mt-2 flex items-center gap-2 text-[11px] font-medium opacity-80">
+                              <span
+                                className={`size-2 rounded-full ${
+                                  member.status === "Online" ? "bg-[#2A8F72]" : "bg-black/30"
                                 }`}
-                              >
-                                <span>{r}</span>
-                                {member.role === r && <Check size={13} className="text-[#2A8F72]" />}
-                              </button>
-                            ))}
+                              />
+                              <span>Status: {member.status}</span>
+                            </div>
                           </div>
 
-                          {/* Remove from team button */}
-                          <div className="border-t border-black/10 dark:border-white/10 mt-1.5 pt-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveMember(member)}
-                              className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl font-bold text-[#FF5A1F] hover:bg-[#FF5A1F]/10 transition text-left"
-                            >
-                              <UserMinus size={14} />
-                              <span>Remove from team</span>
-                            </button>
-                          </div>
+                          {isTeamLeader ? (
+                            <>
+                              {/* Role Switcher (Leader only) */}
+                              <div className="space-y-0.5">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-black/40 dark:text-white/40 px-2 py-0.5 block">
+                                  Change Role
+                                </span>
+                                {(["Admin", "Engineer", "Viewer"] as const).map((r) => (
+                                  <button
+                                    key={r}
+                                    type="button"
+                                    onClick={() => handleRoleChange(member, r)}
+                                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl font-medium transition text-left ${
+                                      member.role === r
+                                        ? "bg-black/5 dark:bg-white/10 font-bold"
+                                        : "hover:bg-black/5 dark:hover:bg-white/5"
+                                    }`}
+                                  >
+                                    <span>{r === "Admin" ? "Team Leader (Admin)" : r}</span>
+                                    {member.role === r && <Check size={13} className="text-[#2A8F72]" />}
+                                  </button>
+                                ))}
+                              </div>
+
+                              {/* Remove from team button (Leader only) */}
+                              <div className="border-t border-black/10 dark:border-white/10 mt-2 pt-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveMember(member)}
+                                  className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl font-bold text-[#FF5A1F] hover:bg-[#FF5A1F]/10 transition text-left"
+                                >
+                                  <UserMinus size={14} />
+                                  <span>Remove from team</span>
+                                </button>
+                              </div>
+                            </>
+                          ) : (
+                            /* Regular Member Read-Only Info View */
+                            <div className="space-y-2 pt-1">
+                              <div className="rounded-xl bg-black/5 dark:bg-white/5 p-2 text-[11px] leading-relaxed">
+                                <b className="block text-[10px] uppercase font-bold text-black/60 dark:text-white/60 mb-0.5">
+                                  Permissions
+                                </b>
+                                {member.role === "Admin"
+                                  ? "Full administrative control, role assignment, and team management."
+                                  : member.role === "Engineer"
+                                    ? "Triage incoming outages, run AI investigation, and document resolutions."
+                                    : "Read-only workspace visibility into active incidents and analytics."}
+                              </div>
+                              <div className="flex items-center gap-1.5 text-[10px] text-black/50 dark:text-white/50 px-1 pt-1">
+                                <Lock size={11} className="shrink-0" />
+                                <span>Only Team Leaders can modify roles or remove members.</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
