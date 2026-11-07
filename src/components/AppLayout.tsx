@@ -76,7 +76,7 @@ export function AppLayout() {
           <X size={20} />
         </button>
       </div>
-      <nav className="flex-1 overflow-auto p-3" aria-label="Primary navigation">
+      <nav className="flex-1 overflow-y-auto no-scrollbar p-3" aria-label="Primary navigation">
         <p className="px-3 pb-2 pt-3 text-[10px] font-black uppercase tracking-[.2em] opacity-40">
           Control room
         </p>

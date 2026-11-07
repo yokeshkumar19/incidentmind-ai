@@ -62,12 +62,12 @@
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
-    touch-action: pan-x pan-y !important;
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(23, 23, 23, 0.2) transparent;
   }
   body {
     min-width: 320px;
@@ -79,33 +79,49 @@
     font-family: "DM Sans", sans-serif;
     text-rendering: optimizeLegibility;
     overflow-x: hidden;
-    touch-action: pan-x pan-y !important;
-    overscroll-behavior-y: none;
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(23, 23, 23, 0.2) transparent;
+  }
+  .dark html,
+  .dark body {
+    scrollbar-color: rgba(243, 244, 246, 0.25) transparent;
   }
   #root {
     width: 100%;
     max-width: 100%;
     min-height: 100vh;
-    overflow-x: hidden;
-    touch-action: pan-x pan-y !important;
+  }
+  /* Sleek modern floating scrollbar: removes bulky gray sidebar track completely */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(23, 23, 23, 0.2);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(23, 23, 23, 0.4);
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: rgba(243, 244, 246, 0.25);
+  }
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: rgba(243, 244, 246, 0.45);
+  }
+  /* Utility to completely hide scrollbars on specific elements */
+  .no-scrollbar {
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
   }
-  /* Enforce unzoomable constraints and hide all scrollbars across all descendants */
-  *, *::before, *::after {
-    touch-action: pan-x pan-y;
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
-  }
-  /* Completely hide all scrollbars across WebKit and Chromium browsers */
-  ::-webkit-scrollbar,
-  *::-webkit-scrollbar {
+  .no-scrollbar::-webkit-scrollbar {
     display: none !important;
     width: 0 !important;
     height: 0 !important;
-    background: transparent !important;
   }
   button, a, input, select, textarea, [role="button"] {
     touch-action: manipulation;
