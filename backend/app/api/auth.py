@@ -139,6 +139,8 @@ def forgot_password(
         return MessageResponse(
             message="Password reset instructions have been sent to your email inbox. Please check your inbox and spam folder."
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error in forgot_password: {e}", exc_info=True)
         db.rollback()
