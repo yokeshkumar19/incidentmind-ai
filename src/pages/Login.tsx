@@ -11,6 +11,8 @@ import {
   Zap,
   KeyRound,
   CheckCircle2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useApp } from "../app/state";
 import { api } from "../api/client";
@@ -23,6 +25,8 @@ export function Login() {
   const [password, setPassword] = useState("");
   const [resetToken, setResetToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -373,13 +377,22 @@ export function Login() {
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 opacity-35" size={17} />
                     <input
-                      className="field pl-11"
-                      type="password"
+                      className="field pl-11 pr-11"
+                      type={showNewPassword ? "text" : "password"}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="At least 6 characters"
                       required
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-100 transition-opacity p-1 text-inherit"
+                      title={showNewPassword ? "Hide password" : "Show password"}
+                      aria-label={showNewPassword ? "Hide password" : "Show password"}
+                    >
+                      {showNewPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                    </button>
                   </div>
                 </div>
 
@@ -471,13 +484,22 @@ export function Login() {
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 opacity-35" size={17} />
                   <input
-                    className="field pl-11"
-                    type="password"
+                    className="field pl-11 pr-11"
+                    type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-100 transition-opacity p-1 text-inherit"
+                    title={showPassword ? "Hide password" : "Show password"}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
                 </div>
               </div>
 
