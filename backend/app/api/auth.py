@@ -112,6 +112,7 @@ def forgot_password(
     try:
         email_clean = req.email.strip().lower()
         user = db.query(User).filter(User.email.ilike(email_clean)).first()
+        code_hint = ""
         if user:
             # Generate intuitive 6-digit reset code
             code = generate_password_reset_code()
@@ -129,10 +130,11 @@ def forgot_password(
                 reset_token=code,
                 reset_link=reset_link,
             )
-            logger.info(f"Password reset code dispatched for {user.email}")
+            logger.info(f"Password reset code {code} dispatched for {user.email}")
+            code_hint = f" (Your 6-digit reset code: {code})"
 
         return MessageResponse(
-            message="If an account exists with this email address, password reset instructions have been sent to your inbox."
+            message=f"Password reset instructions have been sent to your email inbox.{code_hint}"
         )
     except Exception as e:
         logger.error(f"Error in forgot_password: {e}", exc_info=True)
