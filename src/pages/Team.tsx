@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Activity, Mail, MoreHorizontal, Plus, Shield, Users, Copy, Check } from "lucide-react";
+import { Activity, Mail, MoreHorizontal, Plus, Shield, Users, Copy, Check, UserMinus } from "lucide-react";
 import { members as defaultMembers } from "../data/demo";
 import { useApp } from "../app/state";
 import { Modal, PageHeader, StatCard } from "../components/ui";
@@ -9,7 +9,8 @@ export function Team() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("Engineer");
-  const [serverMembers, setServerMembers] = useState<any[]>([]);
+  const [teamMembers, setTeamMembers] = useState<any[]>(defaultMembers);
+  const [activeMenuMember, setActiveMenuMember] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const { toast, activeTeam, incidents } = useApp();
 
@@ -24,6 +25,9 @@ export function Team() {
         if (active && Array.isArray(m) && m.length > 0) {
           const colors = ["#FF5A1F", "#3155E7", "#6428C8", "#2A8F72"];
           const mapped = m.map((item, idx) => ({
+            id: item.id,
+            userId: item.user_id,
+            email: item.user_email,
             name: item.user_name || "Engineer",
             initials: (item.user_name || "EN")
               .split(" ")
@@ -37,7 +41,7 @@ export function Team() {
             resolved: 0,
             color: colors[idx % colors.length],
           }));
-          setServerMembers(mapped);
+          setTeamMembers(mapped);
         }
       })
       .catch(() => {});
@@ -46,7 +50,47 @@ export function Team() {
     };
   }, []);
 
-  const members = serverMembers.length > 0 ? serverMembers : defaultMembers;
+  // Close 3-dots popover on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(".member-menu-container")) {
+        setActiveMenuMember(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const members = teamMembers;
+
+  const handleRoleChange = async (member: any, newRole: string) => {
+    try {
+      if (member.id) {
+        await api.teams.updateRole(member.id, newRole);
+      }
+      setTeamMembers((prev) =>
+        prev.map((m) => (m.name === member.name ? { ...m, role: newRole } : m))
+      );
+      toast(`Updated ${member.name}'s role to ${newRole}`);
+      setActiveMenuMember(null);
+    } catch (err: any) {
+      toast(err.message || "Failed to update member role");
+    }
+  };
+
+  const handleRemoveMember = async (member: any) => {
+    try {
+      if (member.id) {
+        await api.teams.removeMember(member.id);
+      }
+      setTeamMembers((prev) => prev.filter((m) => m.name !== member.name));
+      toast(`Removed ${member.name} from the workspace`);
+      setActiveMenuMember(null);
+    } catch (err: any) {
+      toast(err.message || "Failed to remove member");
+    }
+  };
   const inviteCode = activeTeam?.invite_code || "ATLAS-2026";
 
   const copyInvite = () => {
@@ -156,13 +200,71 @@ export function Team() {
                       <strong className="block truncate">{member.name}</strong>
                       <small className="opacity-45">{member.role}</small>
                     </div>
-                    <button
-                      className="icon-button ml-auto"
-                      onClick={() => toast(`Role: ${member.role} for ${member.name}`)}
-                      aria-label={`Actions for ${member.name}`}
-                    >
-                      <MoreHorizontal size={18} />
-                    </button>
+                    <div className="relative ml-auto member-menu-container">
+                      <button
+                        className="icon-button"
+                        onClick={() =>
+                          setActiveMenuMember(activeMenuMember === member.name ? null : member.name)
+                        }
+                        aria-label={`Actions for ${member.name}`}
+                      >
+                        <MoreHorizontal size={18} />
+                      </button>
+
+                      {activeMenuMember === member.name && (
+                        <div className="absolute right-0 top-11 z-30 w-56 rounded-2xl border-2 border-black bg-white p-2.5 shadow-[4px_4px_0_#171717] dark:border-white/20 dark:bg-[#111827] text-xs">
+                          {/* Member Role Header */}
+                          <div className="px-2 py-1.5 border-b border-black/10 dark:border-white/10 mb-1.5">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-black/50 dark:text-white/50 block">
+                              Workspace Role
+                            </span>
+                            <div className="flex items-center gap-1.5 mt-1 font-bold text-sm text-[#3155E7] dark:text-[#60A5FA]">
+                              <Shield size={14} />
+                              <span>{member.role}</span>
+                            </div>
+                            {member.email && (
+                              <span className="text-[11px] opacity-60 truncate block mt-0.5">
+                                {member.email}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Role Switcher */}
+                          <div className="space-y-0.5">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-black/40 dark:text-white/40 px-2 py-0.5 block">
+                              Change Role
+                            </span>
+                            {(["Admin", "Engineer", "Viewer"] as const).map((r) => (
+                              <button
+                                key={r}
+                                type="button"
+                                onClick={() => handleRoleChange(member, r)}
+                                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl font-medium transition text-left ${
+                                  member.role === r
+                                    ? "bg-black/5 dark:bg-white/10 font-bold"
+                                    : "hover:bg-black/5 dark:hover:bg-white/5"
+                                }`}
+                              >
+                                <span>{r}</span>
+                                {member.role === r && <Check size={13} className="text-[#2A8F72]" />}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Remove from team button */}
+                          <div className="border-t border-black/10 dark:border-white/10 mt-1.5 pt-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveMember(member)}
+                              className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl font-bold text-[#FF5A1F] hover:bg-[#FF5A1F]/10 transition text-left"
+                            >
+                              <UserMinus size={14} />
+                              <span>Remove from team</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="mt-4 flex items-center gap-3 border-t border-black/10 pt-3 text-xs font-bold dark:border-white/10">
                     <span

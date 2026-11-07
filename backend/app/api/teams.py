@@ -250,3 +250,62 @@ def update_member_role(
         joined_at=membership.joined_at,
     )
 
+
+@router.delete("/members/{member_id}")
+def remove_team_member(
+    member_id: str,
+    current_team: Team = Depends(get_current_team),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    DELETE /api/teams/members/{member_id}
+    Removes a member from the active workspace (Admins only or self-removal).
+    """
+    membership = (
+        db.query(TeamMember)
+        .filter(
+            (TeamMember.id == member_id) | (TeamMember.user_id == member_id),
+            TeamMember.team_id == current_team.id
+        )
+        .first()
+    )
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found in workspace."
+        )
+
+    # Check caller role: must be Admin or leaving team themselves
+    caller_membership = (
+        db.query(TeamMember)
+        .filter(TeamMember.team_id == current_team.id, TeamMember.user_id == current_user.id)
+        .first()
+    )
+    is_admin = caller_membership and caller_membership.role == "Admin"
+    is_self = membership.user_id == current_user.id
+
+    if not is_admin and not is_self:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only workspace Admins can remove other team members."
+        )
+
+    # Prevent removing the workspace creator if they are the sole admin
+    if membership.user_id == current_team.created_by:
+        admin_count = (
+            db.query(TeamMember)
+            .filter(TeamMember.team_id == current_team.id, TeamMember.role == "Admin")
+            .count()
+        )
+        if admin_count <= 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot remove the workspace creator and primary admin."
+            )
+
+    user_name = membership.user.name if membership.user else "Member"
+    db.delete(membership)
+    db.commit()
+    return {"message": f"{user_name} has been removed from {current_team.name}.", "status": "ok"}
+

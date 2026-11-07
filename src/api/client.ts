@@ -126,6 +126,10 @@ class ApiClient {
         method: "PATCH",
         body: JSON.stringify({ role }),
       }),
+    removeMember: (memberId: string) =>
+      this.request<{ message: string; status: string }>(`/teams/members/${memberId}`, {
+        method: "DELETE",
+      }),
   };
 
   // Incidents
