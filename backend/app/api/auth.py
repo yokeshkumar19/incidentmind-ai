@@ -218,6 +218,32 @@ def test_email(to: str = "yokeshkumar192007@gmail.com"):
     )
     results["dispatch_result"] = res
 
+    # Direct Resend API probe
+    if settings.RESEND_API_KEY:
+        try:
+            import httpx
+            with httpx.Client(timeout=10) as client:
+                resend_resp = client.post(
+                    "https://api.resend.com/emails",
+                    headers={
+                        "Authorization": f"Bearer {settings.RESEND_API_KEY.strip()}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "from": settings.RESEND_FROM_EMAIL or "IncidentMind AI <onboarding@resend.dev>",
+                        "to": [to],
+                        "subject": "IncidentMind AI — Direct Verification Test",
+                        "html": f"<p>Hello! Your verification code is <b>482915</b>.</p>",
+                    }
+                )
+                results["resend_status_code"] = resend_resp.status_code
+                try:
+                    results["resend_body"] = resend_resp.json()
+                except Exception:
+                    results["resend_body"] = resend_resp.text
+        except Exception as e:
+            results["resend_error"] = str(e)
+
     # Direct SMTP probe to capture raw socket exceptions if any
     try:
         if settings.SMTP_PORT == 465:
