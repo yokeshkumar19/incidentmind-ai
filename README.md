@@ -84,13 +84,9 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-2. Configure environment variables in `backend/.env`:
-```env
 
-```
-*(If no external API keys are set, IncidentMind AI gracefully runs its evidence-grounded local reasoning and database memory engine so all flows work out-of-the-box).*
 
-3. Start the FastAPI development server:
+2. Start the FastAPI development server:
 ```powershell
 uvicorn backend.app.main:app --reload --port 8000
 ```
@@ -102,7 +98,7 @@ The API documentation will be available at:
 
 ---
 
-## 4. Running the Automated Test Suite
+## 3. Running the Automated Test Suite
 
 Run the full pytest suite:
 ```powershell
@@ -125,7 +121,7 @@ All 17 automated tests verify:
 
 ---
 
-## 5. Security & Isolation Highlights
+## 4. Security & Isolation Highlights
 
 1. **Untrusted Data & Log Sanitization**: Uploaded error logs are treated strictly as untrusted text. Obvious JWTs, Bearer tokens, passwords, database connection strings, and AWS keys are redacted before storage and external reasoning.
 2. **Strict Multi-Tenant Workspace Isolation**: Every Hindsight operation uses an isolated bank ID `team_{team_id}`. A user in Team A cannot query or read memories belonging to Team B.
