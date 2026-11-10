@@ -86,10 +86,7 @@ pip install -r requirements.txt
 
 2. Configure environment variables in `backend/.env`:
 ```env
-DATABASE_URL=sqlite:///./incidentmind.db
-SECRET_KEY=incidentmind-development-secret-key-32chars-minimum!
-GROQ_API_KEY=gsk_your_groq_key_here
-HINDSIGHT_API_KEY=hs_your_hindsight_key_here
+
 ```
 *(If no external API keys are set, IncidentMind AI gracefully runs its evidence-grounded local reasoning and database memory engine so all flows work out-of-the-box).*
 
