@@ -15,34 +15,33 @@ def get_current_user(
     db: Session = Depends(get_db)
 ) -> User:
     """
-    Validates JWT token and returns User model.
-    If no auth header is provided in development mode, retrieves or creates a default demo user
-    so developers can test immediately.
+    Validates JWT token and returns authenticated User model.
+    Raises 401 Unauthorized if token is missing, invalid, or user does not exist.
     """
-    token = None
-    if auth:
-        token = auth.credentials
-
-    if token:
-        payload = decode_access_token(token)
-        if payload and "sub" in payload:
-            user = db.query(User).filter(User.id == payload["sub"]).first()
-            if user:
-                return user
-
-    # Development auto-provisioning for seamless testing:
-    dev_user = db.query(User).filter(User.email == "demo@incidentmind.ai").first()
-    if not dev_user:
-        from backend.app.core.security import get_password_hash
-        dev_user = User(
-            name="Maya Chen",
-            email="demo@incidentmind.ai",
-            password_hash=get_password_hash("incidentmind123")
+    if not auth or not auth.credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication token required",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-        db.add(dev_user)
-        db.commit()
-        db.refresh(dev_user)
-    return dev_user
+
+    payload = decode_access_token(auth.credentials)
+    if not payload or "sub" not in payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired authentication token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user = db.query(User).filter(User.id == payload["sub"]).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return user
 
 
 def get_current_team(
