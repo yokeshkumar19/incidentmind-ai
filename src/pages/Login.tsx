@@ -32,7 +32,7 @@ export function Login() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const { loginUser, joinTeam, setAsGuest, toast, currentUser } = useApp();
+  const { loginUser, logoutUser, joinTeam, setAsGuest, toast, currentUser } = useApp();
   const navigate = useNavigate();
 
   const [pendingInvite, setPendingInvite] = useState<string | null>(() => {
@@ -55,27 +55,12 @@ export function Login() {
       setPendingInvite(code);
       sessionStorage.setItem("incidentmind_pending_invite", code);
       if (emailParam) setEmail(emailParam);
-
-      // If user is ALREADY logged in, automatically join the invited workspace immediately
-      const currentToken = localStorage.getItem("incidentmind_token");
-      if (currentToken && currentUser) {
-        toast(`Joining workspace with code ${code}...`);
-        joinTeam(code)
-          .then((team) => {
-            sessionStorage.removeItem("incidentmind_pending_invite");
-            toast(`🎉 Automatically joined and switched to '${team.name}'!`);
-            navigate("/");
-          })
-          .catch((err) => {
-            console.warn("Auto-join failed:", err);
-            toast(`Could not join workspace: ${err.message}`);
-          });
-      } else {
+      if (!currentUser) {
         setMode("register");
-        toast(`Invitation detected for workspace code ${code}`);
       }
+      toast(`Invitation detected for workspace ${code}`);
     }
-  }, [searchParams, currentUser, joinTeam, navigate, toast]);
+  }, [searchParams, currentUser, toast]);
 
   const handleGuestEntry = () => {
     setAsGuest();
@@ -289,13 +274,54 @@ export function Login() {
         {/* Right Side: Auth Form Panel */}
         <div className="panel bg-white/90 dark:bg-[#111827]/90 p-5 sm:p-7 md:p-8 shadow-2xl relative border-2 border-black dark:border-white/20">
           {pendingInvite && (
-            <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border-2 border-[#FF5A1F] bg-[#FF5A1F]/15 p-3.5 text-xs font-bold text-[#FF5A1F] shadow-[3px_3px_0_#FF5A1F]">
+            <div className="mb-4 rounded-2xl border-2 border-[#3155E7] bg-[#3155E7]/10 dark:bg-[#3155E7]/20 p-4 text-xs font-bold text-[#3155E7] dark:text-[#60A5FA] shadow-[3px_3px_0_#3155E7] space-y-2.5">
               <div className="flex items-center gap-2">
                 <Users size={18} className="shrink-0" />
                 <span>
-                  Workspace Invitation Detected: <code className="rounded bg-black/10 dark:bg-white/10 px-1.5 py-0.5 font-mono text-black dark:text-white">{pendingInvite}</code>. Sign up or log in to automatically enter the workspace!
+                  Workspace Invitation: <code className="rounded bg-black/10 dark:bg-white/10 px-1.5 py-0.5 font-mono text-black dark:text-white font-black">{pendingInvite}</code>
                 </span>
               </div>
+              {currentUser ? (
+                <div className="pt-1 border-t border-[#3155E7]/20 space-y-2">
+                  <p className="text-black/80 dark:text-white/80 font-medium">
+                    Currently signed in as <b>{currentUser.name}</b> ({currentUser.email}).
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        joinTeam(pendingInvite).then((t) => {
+                          sessionStorage.removeItem("incidentmind_pending_invite");
+                          toast(`🎉 Joined workspace '${t.name}'!`);
+                          navigate("/");
+                        }).catch((err) => {
+                          toast(`Failed: ${err.message}`);
+                        });
+                      }}
+                      className="btn-primary py-2 px-3 text-xs"
+                    >
+                      Join as {currentUser.name} &rarr;
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        logoutUser();
+                        setMode("register");
+                        toast("Logged out. You can now register or sign in as another account.");
+                      }}
+                      className="btn-secondary py-2 px-3 text-xs"
+                    >
+                      Sign in with different account
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-black/70 dark:text-white/70 font-medium">
+                  {mode === "register"
+                    ? "Fill in your details below to create your account and automatically join this workspace!"
+                    : "Sign in below to enter this workspace."}
+                </p>
+              )}
             </div>
           )}
 

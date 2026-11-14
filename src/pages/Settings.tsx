@@ -50,11 +50,11 @@ export function Settings() {
     isGuest,
   } = useApp();
 
-  const [profile, setProfile] = useState({
-    name: currentUser?.name || "Maya Chen",
-    email: currentUser?.email || "maya@atlas.dev",
+  const [profile, setProfile] = useState(() => ({
+    name: currentUser?.name || (isGuest ? "Guest Engineer" : "Engineer"),
+    email: currentUser?.email || (isGuest ? "guest@incidentmind.local" : "engineer@incidentmind.local"),
     timezone: "America/Los_Angeles",
-  });
+  }));
 
   const [notifications, setNotifications] = useState({
     critical: true,
