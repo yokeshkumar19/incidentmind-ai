@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
     # Groq API
     GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "openai/gpt-oss-120b"
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
     # Hindsight Memory Engine
     HINDSIGHT_API_KEY: str = ""
