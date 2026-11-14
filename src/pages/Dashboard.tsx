@@ -1,12 +1,12 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router";
-import { Area, AreaChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { ArrowRight, Clock3, Flame, Layers3, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
+import { Area, AreaChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
+import { ArrowRight, Clock3, Flame, Layers3, ShieldCheck, Sparkles } from "lucide-react";
 import { useApp } from "../app/state";
 import { Badge, PageHeader, severityStyles, StatCard } from "../components/ui";
 
 export function Dashboard() {
-  const { incidents, deleteIncident } = useApp();
+  const { incidents } = useApp();
   const navigate = useNavigate();
   const [range, setRange] = useState("7 days");
 
@@ -56,13 +56,38 @@ export function Dashboard() {
   }, [incidents, totalIncidents]);
 
   const frequencyChartData = useMemo(() => {
-    return [
-      { week: "W1", incidents: 0, critical: 0, resolved: 0 },
-      { week: "W2", incidents: 0, critical: 0, resolved: 0 },
-      { week: "W3", incidents: 0, critical: 0, resolved: 0 },
-      { week: "W4", incidents: totalIncidents, critical: criticalAll, resolved: resolved.length },
-    ];
-  }, [totalIncidents, criticalAll, resolved.length]);
+    if (range === "7 days") {
+      const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      const baseCount = Math.floor(totalIncidents / 7);
+      const remainder = totalIncidents % 7;
+      const baseResolved = Math.floor(resolved.length / 7);
+      return days.map((day, idx) => ({
+        label: day,
+        incidents: baseCount + (idx >= 7 - remainder ? 1 : 0),
+        resolved: baseResolved + (idx === 6 ? resolved.length % 7 : 0),
+      }));
+    } else if (range === "30 days") {
+      const weeks = ["Week 1", "Week 2", "Week 3", "Week 4"];
+      const wBase = Math.floor(totalIncidents / 4);
+      const wRem = totalIncidents % 4;
+      const rBase = Math.floor(resolved.length / 4);
+      return weeks.map((w, idx) => ({
+        label: w,
+        incidents: wBase + (idx >= 4 - wRem ? 1 : 0),
+        resolved: rBase + (idx === 3 ? resolved.length % 4 : 0),
+      }));
+    } else {
+      const months = ["Month 1", "Month 2", "Month 3"];
+      const mBase = Math.floor(totalIncidents / 3);
+      const mRem = totalIncidents % 3;
+      const rBase = Math.floor(resolved.length / 3);
+      return months.map((m, idx) => ({
+        label: m,
+        incidents: mBase + (idx >= 3 - mRem ? 1 : 0),
+        resolved: rBase + (idx === 2 ? resolved.length % 3 : 0),
+      }));
+    }
+  }, [range, totalIncidents, resolved.length]);
 
   const recentActivities = useMemo(() => {
     if (incidents.length === 0) return [];
@@ -71,7 +96,7 @@ export function Dashboard() {
       action: inc.status === "Resolved" ? "resolved incident" : "reported and investigated",
       target: inc.id,
       time: inc.time || "recent",
-      color: inc.severity === "Critical" ? "#FF5A1F" : "#3155E7",
+      color: inc.severity === "Critical" ? "#EF4444" : "#3155E7",
     }));
   }, [incidents]);
 
@@ -80,9 +105,9 @@ export function Dashboard() {
   return (
     <div>
       <PageHeader
-        eyebrow="Live telemetry · Workspace database"
-        title="The incident pulse."
-        description="A live command center for the signals, investigations, and institutional memory shaping your reliability practice."
+        eyebrow="Real-Time Operational Telemetry · Workspace Active"
+        title="Incident Command Center"
+        description="Live incident triage, telemetry signal analysis, and persistent organizational memory recall."
         action={
           <button className="btn-primary" onClick={() => navigate("/report")}>
             Report incident <ArrowRight size={17} />
@@ -92,31 +117,33 @@ export function Dashboard() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Active now"
+          label="Active Incidents"
           value={String(active.length).padStart(2, "0")}
           detail={
             active.length === 0
               ? "All services healthy"
               : active.length === 1
-                ? "1 needs attention"
-                : `${active.length} need attention`
+                ? "1 requires triage"
+                : `${active.length} require triage`
           }
           color="#FF5A1F"
           icon={Flame}
+          className="text-white"
         />
         <StatCard
-          label="Resolved / month"
+          label="Resolved / Cycle"
           value={String(resolved.length).padStart(2, "0")}
           detail={
             resolved.length === 0
               ? "0 resolved so far"
-              : `${resolved.length} resolved this cycle`
+              : `${resolved.length} retained in memory`
           }
           color="#D6FF45"
           icon={ShieldCheck}
+          className="text-[#171717]"
         />
         <StatCard
-          label="Critical"
+          label="Critical Outages"
           value={String(critical.length).padStart(2, "0")}
           detail={
             critical.length === 0
@@ -128,7 +155,7 @@ export function Dashboard() {
           className="text-white"
         />
         <StatCard
-          label="Avg. resolution"
+          label="Avg. Resolution"
           value={avgResolutionHours}
           detail={
             resolved.length === 0
@@ -145,8 +172,8 @@ export function Dashboard() {
         <article className="panel min-w-0 overflow-hidden">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Incident rhythm</p>
-              <h2>Signal velocity</h2>
+              <p className="eyebrow">Telemetry trend</p>
+              <h2>Incident velocity</h2>
             </div>
             <select
               value={range}
@@ -161,29 +188,40 @@ export function Dashboard() {
           </div>
           <div className="h-[260px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={frequencyChartData} margin={{ left: -20, right: 8, top: 16 }}>
+              <AreaChart data={frequencyChartData} margin={{ left: -15, right: 12, top: 16, bottom: 0 }}>
                 <defs>
                   <linearGradient id="orange" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0" stopColor="#FF5A1F" stopOpacity=".5" />
-                    <stop offset="1" stopColor="#FF5A1F" stopOpacity=".02" />
+                    <stop offset="0" stopColor="#FF5A1F" stopOpacity=".45" />
+                    <stop offset="100%" stopColor="#FF5A1F" stopOpacity=".02" />
                   </linearGradient>
                 </defs>
+                <XAxis dataKey="label" stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
                 <Tooltip
-                  contentStyle={{ borderRadius: 14, border: "2px solid #171717", fontWeight: 700 }}
+                  contentStyle={{
+                    backgroundColor: "#1F2937",
+                    color: "#F9FAFB",
+                    borderRadius: 8,
+                    border: "1px solid #374151",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                  }}
+                  itemStyle={{ color: "#F3F4F6" }}
                 />
                 <Area
                   type="monotone"
                   dataKey="incidents"
-                  stroke="#171717"
-                  strokeWidth={3}
+                  stroke="#FF5A1F"
+                  strokeWidth={2.5}
                   fill="url(#orange)"
+                  name="Reported"
                 />
                 <Area
                   type="monotone"
                   dataKey="resolved"
-                  stroke="#3155E7"
+                  stroke="#10B981"
                   strokeWidth={2}
                   fill="transparent"
+                  name="Resolved"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -253,7 +291,7 @@ export function Dashboard() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">What is happening</p>
+              <p className="eyebrow">Real-Time Queue</p>
               <h2>Active incident board</h2>
             </div>
             <button className="text-link" onClick={() => navigate("/investigation")}>
@@ -263,7 +301,7 @@ export function Dashboard() {
           <div className="space-y-2">
             {active.length === 0 ? (
               <div className="rounded-2xl border-2 border-dashed border-black/15 dark:border-white/15 p-8 text-center">
-                <ShieldCheck className="mx-auto text-[#2A8F72] mb-2" size={32} />
+                <ShieldCheck className="mx-auto text-[#059669] dark:text-[#34D399] mb-2" size={32} />
                 <b className="block text-sm">All systems nominal</b>
                 <p className="text-xs opacity-50 mt-1">No active incidents in this workspace. All services operating normally.</p>
                 <button
@@ -274,38 +312,43 @@ export function Dashboard() {
                 </button>
               </div>
             ) : (
-              active.slice(0, 4).map((incident) => (
-                <div key={incident.id} className="flex items-center gap-2 group">
-                  <button
-                    onClick={() => navigate("/investigation", { state: { incidentId: incident.id } })}
-                    className="incident-row flex-1"
-                  >
-                    <span className="size-2.5 shrink-0 rounded-full animate-pulse bg-[#FF5A1F]" />
-                    <span className="min-w-0 flex-1">
-                      <strong className="block truncate text-sm">{incident.title}</strong>
-                      <small className="mt-0.5 block opacity-45">
-                        {incident.id} · {incident.service} · {incident.time}
-                      </small>
-                    </span>
-                    <Badge className={severityStyles[incident.severity]}>{incident.severity}</Badge>
-                    <ArrowRight size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (window.confirm(`Are you sure you want to delete incident ${incident.id}?`)) {
-                        deleteIncident(incident.id);
-                      }
-                    }}
-                    className="size-9 rounded-xl border border-black/10 dark:border-white/10 grid place-items-center opacity-70 sm:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-[#FF5A1F]/10 hover:border-[#FF5A1F] text-black/40 hover:text-[#FF5A1F] transition shrink-0"
-                    title={`Delete ${incident.id}`}
-                    aria-label={`Delete ${incident.id}`}
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              ))
+              <>
+                {active.slice(0, 6).map((incident) => (
+                  <div key={incident.id} className="flex items-center gap-2 group">
+                    <button
+                      onClick={() => navigate("/investigation", { state: { incidentId: incident.id } })}
+                      className="incident-row flex-1 text-left"
+                    >
+                      <span
+                        className={`size-2.5 shrink-0 rounded-full ${
+                          incident.severity === "Critical" ? "bg-[#FF5A1F] animate-pulse" : "bg-[#3155E7]"
+                        }`}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <strong className="block truncate text-sm font-semibold">{incident.title}</strong>
+                        <small className="mt-0.5 block opacity-60 font-mono text-[11px] tabular-nums">
+                          {incident.id} · {incident.service} · {incident.time}
+                        </small>
+                      </span>
+                      <Badge className={severityStyles[incident.severity]}>{incident.severity}</Badge>
+                      <span className="ml-2 hidden text-xs font-bold text-[#FF5A1F] sm:inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        Investigate <ArrowRight size={13} />
+                      </span>
+                    </button>
+                  </div>
+                ))}
+                {active.length > 6 && (
+                  <div className="mt-3 flex items-center justify-between rounded-xl bg-black/5 dark:bg-white/5 px-4 py-2.5 text-xs font-semibold">
+                    <span className="opacity-70">Showing 6 of {active.length} active incidents</span>
+                    <button
+                      onClick={() => navigate("/investigation")}
+                      className="font-bold text-[#FF5A1F] hover:underline flex items-center gap-1"
+                    >
+                      View and investigate all {active.length} <ArrowRight size={13} />
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </article>

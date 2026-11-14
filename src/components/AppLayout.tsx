@@ -1,22 +1,27 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
+  AlertTriangle,
   Archive,
   BarChart3,
   Bell,
   Bot,
   BrainCircuit,
+  Check,
+  CheckCircle2,
   ChevronRight,
   CircleDot,
   Command,
   FilePlus2,
+  Flame,
   LayoutDashboard,
   Menu,
   Search,
   Settings,
   ShieldCheck,
+  Sparkles,
   Users,
   X,
 } from "lucide-react";
@@ -38,8 +43,10 @@ export function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifFilter, setNotifFilter] = useState<"all" | "alerts" | "workspace">("all");
+  const [readNotifs, setReadNotifs] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
-  const { incidents, toasts, dismissToast, currentUser } = useApp();
+  const { incidents, toasts, dismissToast, currentUser, activeTeam } = useApp();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -53,6 +60,92 @@ export function AppLayout() {
   const results = incidents.filter((i) =>
     `${i.id} ${i.title} ${i.service}`.toLowerCase().includes(query.toLowerCase()),
   );
+
+  const activeIncidents = incidents.filter((i) => i.status !== "Resolved");
+  const criticalCount = activeIncidents.filter((i) => i.severity === "Critical").length;
+
+  const notificationsList = useMemo(() => {
+    const list: Array<{
+      id: string;
+      title: string;
+      detail: string;
+      time: string;
+      category: "alerts" | "workspace" | "system";
+      severity?: string;
+      action?: () => void;
+      actionLabel?: string;
+    }> = [];
+
+    // Active incidents as alerts
+    activeIncidents.forEach((inc) => {
+      list.push({
+        id: `inc-${inc.id}`,
+        title: `${inc.severity}: ${inc.title}`,
+        detail: `Service: ${inc.service} · Triage Status: ${inc.status}`,
+        time: inc.time || "Active now",
+        category: "alerts",
+        severity: inc.severity,
+        action: () => {
+          navigate("/investigation", { state: { incidentId: inc.id } });
+          setNotificationsOpen(false);
+        },
+        actionLabel: "Investigate →",
+      });
+    });
+
+    // Workspace membership notification
+    if (activeTeam) {
+      list.push({
+        id: `team-${activeTeam.id}`,
+        title: `Workspace: ${activeTeam.name}`,
+        detail: `Invite Code: ${activeTeam.invite_code || "ATLAS-2026"} · Role: ${activeTeam.role || "Member"}`,
+        time: "Current",
+        category: "workspace",
+        action: () => {
+          navigate("/team");
+          setNotificationsOpen(false);
+        },
+        actionLabel: "View Team →",
+      });
+    }
+
+    // Newly retained fleet memory
+    const resolvedIncidents = incidents.filter((i) => i.status === "Resolved");
+    if (resolvedIncidents.length > 0) {
+      const latest = resolvedIncidents[0];
+      list.push({
+        id: `mem-${latest.id}`,
+        title: `Resolution Retained into Fleet Memory`,
+        detail: `Incident ${latest.id} (${latest.service}) resolution verified and committed to Vectorize Hindsight.`,
+        time: latest.time || "Recent",
+        category: "workspace",
+        action: () => {
+          navigate("/memory");
+          setNotificationsOpen(false);
+        },
+        actionLabel: "Browse Memory →",
+      });
+    }
+
+    // IoT Telemetry Gateway status
+    list.push({
+      id: "telemetry-stream",
+      title: "IoT Edge Telemetry Synchronized",
+      detail: "MQTT & HTTP sensor telemetry gateways connected to IncidentMind AI.",
+      time: "Live",
+      category: "system",
+    });
+
+    return list;
+  }, [activeIncidents, activeTeam, incidents, navigate]);
+
+  const filteredNotifications = useMemo(() => {
+    if (notifFilter === "alerts") return notificationsList.filter((n) => n.category === "alerts");
+    if (notifFilter === "workspace") return notificationsList.filter((n) => n.category === "workspace");
+    return notificationsList;
+  }, [notificationsList, notifFilter]);
+
+  const unreadCount = notificationsList.filter((n) => !readNotifs.has(n.id)).length;
 
   const sidebar = (
     <>
@@ -151,16 +244,45 @@ export function AppLayout() {
             </kbd>
           </button>
           <div className="ml-auto flex items-center gap-2">
-            <div className="hidden items-center gap-2 rounded-full bg-[#D6FF45] px-3 py-2 text-xs font-black text-black sm:flex">
-              <Activity size={15} /> All systems nominal
-            </div>
+            {criticalCount > 0 ? (
+              <button
+                onClick={() => navigate("/")}
+                className="hidden items-center gap-2 rounded-full bg-[#EF4444] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-[#DC2626] transition sm:flex"
+                title={`${criticalCount} active critical incident${criticalCount > 1 ? "s" : ""}`}
+              >
+                <span className="size-2 rounded-full bg-white animate-pulse" />
+                <span>Critical Outage ({criticalCount})</span>
+              </button>
+            ) : activeIncidents.length > 0 ? (
+              <button
+                onClick={() => navigate("/")}
+                className="hidden items-center gap-2 rounded-full bg-[#F59E0B] px-3.5 py-1.5 text-xs font-bold text-[#171717] shadow-sm hover:bg-[#D97706] transition sm:flex"
+                title={`${activeIncidents.length} active incident${activeIncidents.length > 1 ? "s" : ""}`}
+              >
+                <Activity size={14} className="animate-spin text-[#171717]" style={{ animationDuration: "3s" }} />
+                <span>Degraded ({activeIncidents.length} active)</span>
+              </button>
+            ) : (
+              <div className="hidden items-center gap-2 rounded-full bg-[#10B981]/15 border border-[#10B981]/30 px-3.5 py-1.5 text-xs font-bold text-[#059669] dark:text-[#34D399] sm:flex">
+                <Activity size={14} className="text-[#10B981]" />
+                <span>Systems Nominal</span>
+              </div>
+            )}
             <button
               className="icon-button relative"
               aria-label="Notifications"
-              onClick={() => setNotificationsOpen(true)}
+              onClick={() => {
+                setNotificationsOpen(true);
+                setReadNotifs(new Set(notificationsList.map((n) => n.id)));
+              }}
+              title={unreadCount > 0 ? `${unreadCount} unread notification${unreadCount > 1 ? "s" : ""}` : "Notifications"}
             >
               <Bell size={19} />
-              <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-[#FF5A1F]" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#FF5A1F] px-1 text-[9px] font-black text-white shadow-sm animate-pulse">
+                  {unreadCount}
+                </span>
+              )}
             </button>
             {currentUser ? (
               <button
@@ -240,43 +362,139 @@ export function AppLayout() {
       <Modal
         open={notificationsOpen}
         onClose={() => setNotificationsOpen(false)}
-        title="Signal feed"
+        title="Live Fleet & System Notifications"
       >
-        <div className="space-y-3">
-          {[
-            "INC-2048 confidence increased to 87%",
-            "Identity service entered monitoring",
-            "Three new memory links discovered",
-          ].map((text, i) => (
-            <div
-              key={text}
-              className="flex gap-3 rounded-2xl bg-white/60 p-4 dark:border dark:border-[#374151] dark:bg-[#111827]"
-            >
-              <span
-                className={`mt-1 size-2.5 shrink-0 rounded-full ${i === 0 ? "bg-[#FF5A1F]" : i === 1 ? "bg-[#3155E7]" : "bg-[#6428C8]"}`}
-              />
-              <div>
-                <p className="text-sm font-bold">{text}</p>
-                <p className="mt-1 text-xs opacity-45">{i * 12 + 4} minutes ago</p>
-              </div>
+        <div className="space-y-4 pt-1">
+          {/* Header controls & filter tabs */}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-black/10 dark:border-white/10 pb-3">
+            <div className="flex items-center gap-1.5 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setNotifFilter("all")}
+                className={`px-3 py-1 rounded-lg transition ${
+                  notifFilter === "all"
+                    ? "bg-[#3155E7] text-white shadow-sm"
+                    : "bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10"
+                }`}
+              >
+                All ({notificationsList.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setNotifFilter("alerts")}
+                className={`px-3 py-1 rounded-lg transition ${
+                  notifFilter === "alerts"
+                    ? "bg-[#FF5A1F] text-white shadow-sm"
+                    : "bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10"
+                }`}
+              >
+                Alerts ({activeIncidents.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setNotifFilter("workspace")}
+                className={`px-3 py-1 rounded-lg transition ${
+                  notifFilter === "workspace"
+                    ? "bg-[#6428C8] text-white shadow-sm"
+                    : "bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10"
+                }`}
+              >
+                Workspace
+              </button>
             </div>
-          ))}
+            {notificationsList.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setReadNotifs(new Set(notificationsList.map((n) => n.id)))}
+                className="text-[11px] font-bold text-[#FF5A1F] hover:underline flex items-center gap-1"
+              >
+                <Check size={12} /> Mark all read
+              </button>
+            )}
+          </div>
+
+          {/* Notifications feed list */}
+          <div className="space-y-2.5 max-h-[380px] overflow-y-auto no-scrollbar pr-1">
+            {filteredNotifications.length === 0 ? (
+              <div className="p-8 text-center text-xs opacity-50">
+                No notifications matching current filter.
+              </div>
+            ) : (
+              filteredNotifications.map((notif) => {
+                const isRead = readNotifs.has(notif.id);
+                return (
+                  <div
+                    key={notif.id}
+                    className={`flex items-start justify-between gap-3 rounded-2xl p-3.5 transition border ${
+                      isRead
+                        ? "bg-black/[0.02] dark:bg-white/[0.02] border-black/5 dark:border-white/5 opacity-75"
+                        : "bg-white/80 dark:bg-[#111827] border-black/10 dark:border-white/10 shadow-sm"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3 min-w-0">
+                      <span
+                        className={`mt-1 size-2.5 shrink-0 rounded-full ${
+                          notif.severity === "Critical"
+                            ? "bg-[#FF5A1F] animate-pulse"
+                            : notif.severity === "High"
+                              ? "bg-[#F97316]"
+                              : notif.category === "workspace"
+                                ? "bg-[#3155E7]"
+                                : "bg-[#10B981]"
+                        }`}
+                      />
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold leading-snug truncate text-black dark:text-white">
+                          {notif.title}
+                        </p>
+                        <p className="mt-0.5 text-[11px] opacity-70 line-clamp-2">
+                          {notif.detail}
+                        </p>
+                        <p className="mt-1 text-[10px] font-mono opacity-40">
+                          {notif.time}
+                        </p>
+                      </div>
+                    </div>
+                    {notif.action && (
+                      <button
+                        type="button"
+                        onClick={notif.action}
+                        className="shrink-0 text-xs font-bold text-[#FF5A1F] hover:underline px-2.5 py-1 rounded-lg hover:bg-[#FF5A1F]/10 transition"
+                      >
+                        {notif.actionLabel || "View →"}
+                      </button>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
       </Modal>
-      <div className="fixed bottom-5 right-5 z-[120] space-y-2">
+      <div className="fixed bottom-5 right-5 z-[120] space-y-2 max-w-sm pointer-events-none">
         {toasts.map((item) => (
-          <motion.button
+          <motion.div
             key={item.id}
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0 }}
-            onClick={() => dismissToast(item.id)}
-            className="flex items-center gap-3 rounded-2xl border-2 border-black bg-[#D6FF45] px-4 py-3 text-sm font-black text-black shadow-[5px_5px_0_#171717]"
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            className="pointer-events-auto flex items-center justify-between gap-3 rounded-2xl border-2 border-black dark:border-white/20 bg-[#D6FF45] dark:bg-[#1E293B] p-3.5 text-xs font-black text-black dark:text-white shadow-[4px_4px_0_#171717]"
           >
-            <Bot size={18} />
-            {item.message}
-            <X size={14} />
-          </motion.button>
+            <div className="flex items-center gap-2.5">
+              <span className="grid size-6 shrink-0 place-items-center rounded-lg bg-black/10 dark:bg-white/10">
+                <Bell size={13} className="text-[#FF5A1F]" />
+              </span>
+              <span>{item.message}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => dismissToast(item.id)}
+              className="text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white p-1"
+              title="Dismiss"
+            >
+              <X size={13} />
+            </button>
+          </motion.div>
         ))}
       </div>
     </div>

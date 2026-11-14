@@ -36,3 +36,4 @@ backend/.env
 # beside it.
 /.plugins/
 /.opencode-skills/
+.impeccable/

@@ -7,11 +7,13 @@ class UserCreate(BaseModel):
     name: str = Field(..., min_length=2, max_length=100)
     email: EmailStr
     password: str = Field(..., min_length=6, max_length=100)
+    invite_code: Optional[str] = None
 
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+    invite_code: Optional[str] = None
 
 
 class UserResponse(BaseModel):

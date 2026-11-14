@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
+  Users,
 } from "lucide-react";
 import { useApp } from "../app/state";
 import { api } from "../api/client";
@@ -31,14 +32,18 @@ export function Login() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const { loginUser, setAsGuest, toast } = useApp();
+  const { loginUser, joinTeam, setAsGuest, toast, currentUser } = useApp();
   const navigate = useNavigate();
+
+  const [pendingInvite, setPendingInvite] = useState<string | null>(() => {
+    return searchParams.get("invite") || searchParams.get("invite_code") || sessionStorage.getItem("incidentmind_pending_invite");
+  });
 
   // Auto-detect reset_token or invite from URL params
   useEffect(() => {
     const tokenParam = searchParams.get("reset_token");
     const emailParam = searchParams.get("email");
-    const inviteParam = searchParams.get("invite");
+    const inviteParam = searchParams.get("invite") || searchParams.get("invite_code");
 
     if (tokenParam) {
       setResetToken(tokenParam);
@@ -46,11 +51,31 @@ export function Login() {
       setMode("reset");
       toast("Enter your new password below");
     } else if (inviteParam) {
+      const code = inviteParam.trim();
+      setPendingInvite(code);
+      sessionStorage.setItem("incidentmind_pending_invite", code);
       if (emailParam) setEmail(emailParam);
-      setMode("register");
-      toast(`Accepting invitation for code ${inviteParam}`);
+
+      // If user is ALREADY logged in, automatically join the invited workspace immediately
+      const currentToken = localStorage.getItem("incidentmind_token");
+      if (currentToken && currentUser) {
+        toast(`Joining workspace with code ${code}...`);
+        joinTeam(code)
+          .then((team) => {
+            sessionStorage.removeItem("incidentmind_pending_invite");
+            toast(`🎉 Automatically joined and switched to '${team.name}'!`);
+            navigate("/");
+          })
+          .catch((err) => {
+            console.warn("Auto-join failed:", err);
+            toast(`Could not join workspace: ${err.message}`);
+          });
+      } else {
+        setMode("register");
+        toast(`Invitation detected for workspace code ${code}`);
+      }
     }
-  }, [searchParams, toast]);
+  }, [searchParams, currentUser, joinTeam, navigate, toast]);
 
   const handleGuestEntry = () => {
     setAsGuest();
@@ -111,6 +136,8 @@ export function Login() {
     setError(null);
     setLoading(true);
 
+    const inviteCodeToUse = (pendingInvite || sessionStorage.getItem("incidentmind_pending_invite") || "").trim();
+
     try {
       if (mode === "register") {
         if (!name.trim()) throw new Error("Please enter your name.");
@@ -118,25 +145,73 @@ export function Login() {
         if (password.length < 6) throw new Error("Password must be at least 6 characters.");
 
         try {
-          const res = await api.auth.register({ name: name.trim(), email: email.trim(), password });
+          const res = await api.auth.register({
+            name: name.trim(),
+            email: email.trim(),
+            password,
+            invite_code: inviteCodeToUse || undefined,
+          });
           await loginUser(res.access_token, res.user);
-          toast(`Welcome to IncidentMind, ${res.user.name}!`);
+
+          if (inviteCodeToUse) {
+            try {
+              const joined = await joinTeam(inviteCodeToUse);
+              sessionStorage.removeItem("incidentmind_pending_invite");
+              toast(`🎉 Welcome ${res.user.name}! You've been automatically added to '${joined.name}'.`);
+            } catch (jErr: any) {
+              console.warn("Auto-join error:", jErr);
+              toast(`Welcome to IncidentMind, ${res.user.name}!`);
+            }
+          } else {
+            toast(`Welcome to IncidentMind, ${res.user.name}!`);
+          }
           navigate("/");
           return;
         } catch (regErr: any) {
           if (regErr.message?.toLowerCase().includes("already exists")) {
-            const loginRes = await api.auth.login({ email: email.trim(), password });
+            const loginRes = await api.auth.login({
+              email: email.trim(),
+              password,
+              invite_code: inviteCodeToUse || undefined,
+            });
             await loginUser(loginRes.access_token, loginRes.user);
-            toast(`Welcome back, ${loginRes.user.name}!`);
+
+            if (inviteCodeToUse) {
+              try {
+                const joined = await joinTeam(inviteCodeToUse);
+                sessionStorage.removeItem("incidentmind_pending_invite");
+                toast(`🎉 Welcome back ${loginRes.user.name}! You have joined and switched to '${joined.name}'.`);
+              } catch (jErr: any) {
+                toast(`Welcome back, ${loginRes.user.name}!`);
+              }
+            } else {
+              toast(`Welcome back, ${loginRes.user.name}!`);
+            }
             navigate("/");
             return;
           }
           throw regErr;
         }
       } else {
-        const res = await api.auth.login({ email: email.trim(), password });
+        const res = await api.auth.login({
+          email: email.trim(),
+          password,
+          invite_code: inviteCodeToUse || undefined,
+        });
         await loginUser(res.access_token, res.user);
-        toast(`Welcome back, ${res.user.name}!`);
+
+        if (inviteCodeToUse) {
+          try {
+            const joined = await joinTeam(inviteCodeToUse);
+            sessionStorage.removeItem("incidentmind_pending_invite");
+            toast(`🎉 Welcome back ${res.user.name}! You have been automatically added to '${joined.name}'.`);
+          } catch (jErr: any) {
+            console.warn("Auto-join error:", jErr);
+            toast(`Welcome back, ${res.user.name}!`);
+          }
+        } else {
+          toast(`Welcome back, ${res.user.name}!`);
+        }
         navigate("/");
       }
     } catch (err: any) {
@@ -213,6 +288,17 @@ export function Login() {
 
         {/* Right Side: Auth Form Panel */}
         <div className="panel bg-white/90 dark:bg-[#111827]/90 p-5 sm:p-7 md:p-8 shadow-2xl relative border-2 border-black dark:border-white/20">
+          {pendingInvite && (
+            <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border-2 border-[#FF5A1F] bg-[#FF5A1F]/15 p-3.5 text-xs font-bold text-[#FF5A1F] shadow-[3px_3px_0_#FF5A1F]">
+              <div className="flex items-center gap-2">
+                <Users size={18} className="shrink-0" />
+                <span>
+                  Workspace Invitation Detected: <code className="rounded bg-black/10 dark:bg-white/10 px-1.5 py-0.5 font-mono text-black dark:text-white">{pendingInvite}</code>. Sign up or log in to automatically enter the workspace!
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Header & Mode Switcher */}
           <div className="mb-4 sm:mb-5">
             <div className="flex items-center justify-between">

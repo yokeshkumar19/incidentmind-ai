@@ -72,6 +72,19 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     db.add(membership)
     db.commit()
 
+    # If registered via an invite link, automatically add user to that workspace
+    if user_in.invite_code and user_in.invite_code.strip():
+        invited_team = db.query(Team).filter(Team.invite_code == user_in.invite_code.strip()).first()
+        if invited_team and invited_team.id != team.id:
+            existing_invite_member = (
+                db.query(TeamMember)
+                .filter(TeamMember.team_id == invited_team.id, TeamMember.user_id == user.id)
+                .first()
+            )
+            if not existing_invite_member:
+                db.add(TeamMember(user_id=user.id, team_id=invited_team.id, role="Engineer"))
+                db.commit()
+
     token = create_access_token(user.id)
     return Token(access_token=token, token_type="bearer", user=user)
 
@@ -87,6 +100,19 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password."
         )
+
+    # If logged in via an invite link, automatically add user to that workspace if not already a member
+    if credentials.invite_code and credentials.invite_code.strip():
+        invited_team = db.query(Team).filter(Team.invite_code == credentials.invite_code.strip()).first()
+        if invited_team:
+            existing_member = (
+                db.query(TeamMember)
+                .filter(TeamMember.team_id == invited_team.id, TeamMember.user_id == user.id)
+                .first()
+            )
+            if not existing_member:
+                db.add(TeamMember(user_id=user.id, team_id=invited_team.id, role="Engineer"))
+                db.commit()
 
     token = create_access_token(user.id)
     return Token(access_token=token, token_type="bearer", user=user)

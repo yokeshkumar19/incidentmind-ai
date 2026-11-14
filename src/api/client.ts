@@ -94,12 +94,12 @@ class ApiClient {
 
   // Authentication
   auth = {
-    register: (data: { name: string; email: string; password: string }) =>
+    register: (data: { name: string; email: string; password: string; invite_code?: string }) =>
       this.request<{ access_token: string; user: any }>("/auth/register", {
         method: "POST",
         body: JSON.stringify(data),
       }),
-    login: (data: { email: string; password: string }) =>
+    login: (data: { email: string; password: string; invite_code?: string }) =>
       this.request<{ access_token: string; user: any }>("/auth/login", {
         method: "POST",
         body: JSON.stringify(data),
