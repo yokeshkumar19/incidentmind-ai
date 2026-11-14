@@ -24,22 +24,43 @@ const initial: Form = {
 
 export function ReportIncident() {
   const [form, setForm] = useState<Form>(initial);
+  const [customService, setCustomService] = useState("");
+  const [customEnvironment, setCustomEnvironment] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState<string | null>(null);
   const { addIncident, toast } = useApp();
   const navigate = useNavigate();
   const update = (field: keyof Form, value: string) =>
     setForm((old) => ({ ...old, [field]: value }));
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const next: Record<string, string> = {};
     if (form.title.trim().length < 5) next.title = "Use at least 5 characters.";
     if (form.description.trim().length < 20)
       next.description = "Add at least 20 characters so responders have context.";
-    if (!form.service) next.service = "Choose an affected service.";
+
+    const finalService = form.service === "Other" ? customService.trim() : form.service;
+    const finalEnvironment = form.environment === "Other" ? customEnvironment.trim() : form.environment;
+
+    if (!form.service) {
+      next.service = "Choose an affected service or select 'Other'.";
+    } else if (form.service === "Other" && customService.trim().length < 2) {
+      next.customService = "Specify the custom service name (at least 2 characters).";
+    }
+
+    if (form.environment === "Other" && customEnvironment.trim().length < 2) {
+      next.customEnvironment = "Specify the custom environment name.";
+    }
+
     setErrors(next);
     if (Object.keys(next).length) return;
-    const id = await addIncident(form);
+
+    const id = await addIncident({
+      ...form,
+      service: finalService,
+      environment: finalEnvironment,
+    });
     setSubmitted(id);
     toast(`${id} created successfully`);
   };
@@ -131,14 +152,39 @@ export function ReportIncident() {
                 onChange={(e) => update("service", e.target.value)}
               >
                 <option value="">Select a service</option>
-                <option>Checkout API</option>
-                <option>Identity</option>
-                <option>Search</option>
-                <option>Billing</option>
-                <option>Integrations</option>
+                <option value="Edge Gateway / MQTT">Edge Gateway / MQTT Broker</option>
+                <option value="Firmware OTA Service">Firmware OTA Service</option>
+                <option value="Telemetry Pipeline">Telemetry Pipeline / Sensor Stream</option>
+                <option value="Modbus / RS-485 Serial">Modbus / RS-485 Serial Bus</option>
+                <option value="Solar Inverter Array">Solar Inverter Array / Power Node</option>
+                <option value="Battery Management (BMS)">Battery Management System (BMS)</option>
+                <option value="Sensor Ingestion Node">Sensor Ingestion / Actuator Node</option>
+                <option value="Identity & Auth">Identity & Edge Auth</option>
+                <option value="Database / Storage">Database / Time-Series Storage</option>
+                <option value="Checkout API">Checkout API</option>
+                <option value="Other">Other (Custom Service)...</option>
               </select>
               {errors.service && <p className="error">{errors.service}</p>}
+
+              {/* Custom Service Input when "Other" is chosen */}
+              {form.service === "Other" && (
+                <div className="mt-2.5">
+                  <input
+                    type="text"
+                    className={`field ${errors.customService ? "field-error" : ""}`}
+                    value={customService}
+                    onChange={(e) => {
+                      setCustomService(e.target.value);
+                      if (errors.customService) setErrors((prev) => ({ ...prev, customService: "" }));
+                    }}
+                    placeholder="Enter custom service (e.g. Robot Arm Controller)"
+                    autoFocus
+                  />
+                  {errors.customService && <p className="error">{errors.customService}</p>}
+                </div>
+              )}
             </div>
+
             <div>
               <label className="label" htmlFor="environment">
                 Environment
@@ -149,11 +195,31 @@ export function ReportIncident() {
                 value={form.environment}
                 onChange={(e) => update("environment", e.target.value)}
               >
-                <option>Production</option>
-                <option>Staging</option>
-                <option>Development</option>
-                <option>EU Production</option>
+                <option value="Production">Production (Live Fleet)</option>
+                <option value="Staging">Staging / Pre-deployment</option>
+                <option value="Development">Development / Hardware Lab</option>
+                <option value="Industrial Floor">Industrial Factory Floor</option>
+                <option value="Field Deployment">Field Deployment (Remote Site)</option>
+                <option value="Other">Other (Custom Environment)...</option>
               </select>
+
+              {/* Custom Environment Input when "Other" is chosen */}
+              {form.environment === "Other" && (
+                <div className="mt-2.5">
+                  <input
+                    type="text"
+                    className={`field ${errors.customEnvironment ? "field-error" : ""}`}
+                    value={customEnvironment}
+                    onChange={(e) => {
+                      setCustomEnvironment(e.target.value);
+                      if (errors.customEnvironment) setErrors((prev) => ({ ...prev, customEnvironment: "" }));
+                    }}
+                    placeholder="Enter custom environment (e.g. Cold Storage Bay 4)"
+                    autoFocus
+                  />
+                  {errors.customEnvironment && <p className="error">{errors.customEnvironment}</p>}
+                </div>
+              )}
             </div>
           </div>
           <fieldset>
