@@ -17,6 +17,7 @@ type AppState = {
   }) => Promise<string>;
   resolveIncident: (id: string, resolution: string, actualRootCause?: string) => Promise<void>;
   deleteIncident: (id: string) => Promise<void>;
+  pruneIncidentMemory: (id: string) => void;
   purgeIncidents: () => Promise<void>;
   deleteWorkspace: (teamId: string) => Promise<void>;
   leaveWorkspace: (teamId: string) => Promise<void>;
@@ -402,6 +403,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [toast],
   );
 
+  const pruneIncidentMemory = useCallback((id: string) => {
+    setIncidents((items) =>
+      items.map((item) => (item.id === id ? { ...item, resolution: undefined } : item)),
+    );
+  }, []);
+
   const purgeIncidents = useCallback(async () => {
     try {
       await api.incidents.purgeAll();
@@ -467,6 +474,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addIncident,
       resolveIncident,
       deleteIncident,
+      pruneIncidentMemory,
       purgeIncidents,
       deleteWorkspace,
       leaveWorkspace,
@@ -494,6 +502,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addIncident,
       resolveIncident,
       deleteIncident,
+      pruneIncidentMemory,
       purgeIncidents,
       deleteWorkspace,
       leaveWorkspace,

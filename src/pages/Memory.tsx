@@ -5,8 +5,18 @@ import { Badge, EmptyState, PageHeader, severityStyles, Modal } from "../compone
 import { api } from "../api/client";
 
 export function Memory() {
-  const { incidents, toast } = useApp();
-  const fallbackMemories = incidents.filter((i) => i.resolution);
+  const { incidents, toast, pruneIncidentMemory } = useApp();
+
+  // 1. Blacklist of deleted memory IDs persisted in localStorage
+  const [deletedIds, setDeletedIds] = useState<string[]>(() => {
+    try {
+      const cached = localStorage.getItem("incidentmind_deleted_memories");
+      if (cached) return JSON.parse(cached);
+    } catch (_) {}
+    return [];
+  });
+
+  // 2. Server memories cached locally
   const [serverMemories, setServerMemories] = useState<any[]>(() => {
     try {
       const cached = localStorage.getItem("incidentmind_memories_cache");
@@ -14,12 +24,58 @@ export function Memory() {
     } catch (_) {}
     return [];
   });
+
   const [query, setQuery] = useState("");
   const [service, setService] = useState("All services");
-  const [selected, setSelected] = useState<any>(fallbackMemories[0]);
   const [detailOpen, setDetailOpen] = useState(true);
   const [reflecting, setReflecting] = useState(false);
   const [reflectionResult, setReflectionResult] = useState<any>(null);
+
+  // 3. Memories derived directly from all resolved incidents in the workspace
+  const incidentMemories = useMemo(() => {
+    return incidents
+      .filter((i) => Boolean(i.resolution) && i.status === "Resolved")
+      .map((i) => ({
+        id: i.id,
+        title: i.resolution ? i.resolution.split(".")[0].slice(0, 60) : `Resolution for ${i.title}`,
+        service: i.service || "General",
+        severity: i.severity || "Medium",
+        description: i.description || `Root Cause: ${i.title}`,
+        resolution: i.resolution,
+        tags: [i.service?.toLowerCase() || "reliability", "confirmed"],
+      }));
+  }, [incidents]);
+
+  // 4. Unified memory collection (combines backend records AND newly resolved incidents)
+  const memories = useMemo(() => {
+    const deletedSet = new Set(deletedIds);
+    const map = new Map<string, any>();
+
+    // Add server memories first
+    serverMemories.forEach((m) => {
+      if (!deletedSet.has(m.id)) {
+        map.set(m.id, m);
+      }
+    });
+
+    // Add resolved incidents seamlessly (ensures every newly resolved incident is visible!)
+    incidentMemories.forEach((m) => {
+      if (!deletedSet.has(m.id) && !map.has(m.id)) {
+        map.set(m.id, m);
+      }
+    });
+
+    return Array.from(map.values());
+  }, [serverMemories, incidentMemories, deletedIds]);
+
+  const [selected, setSelected] = useState<any>(() => memories[0] || null);
+
+  // Auto-select first memory if none selected
+  useEffect(() => {
+    if (!selected && memories.length > 0) {
+      setSelected(memories[0]);
+    }
+  }, [selected, memories]);
 
   // Fetch real memories from Hindsight backend
   useEffect(() => {
@@ -44,7 +100,6 @@ export function Memory() {
           try {
             localStorage.setItem("incidentmind_memories_cache", JSON.stringify(mapped));
           } catch (_) {}
-          if (mapped[0]) setSelected(mapped[0]);
         }
       })
       .catch(() => {});
@@ -52,8 +107,6 @@ export function Memory() {
       active = false;
     };
   }, [service]);
-
-  const memories = serverMemories.length > 0 ? serverMemories : fallbackMemories;
 
   const filtered = useMemo(
     () =>
@@ -101,15 +154,43 @@ export function Memory() {
     if (!window.confirm("Are you sure you want to forget and delete this memory from Hindsight? Future AI investigations will no longer recall this resolution.")) {
       return;
     }
+
+    // 1. Add to permanent blacklist in state and localStorage
+    const updatedDeleted = Array.from(new Set([...deletedIds, id]));
+    setDeletedIds(updatedDeleted);
+    try {
+      localStorage.setItem("incidentmind_deleted_memories", JSON.stringify(updatedDeleted));
+    } catch (_) {}
+
+    // 2. Remove from serverMemories cache
+    setServerMemories((prev) => {
+      const next = prev.filter((m) => m.id !== id);
+      try {
+        localStorage.setItem("incidentmind_memories_cache", JSON.stringify(next));
+      } catch (_) {}
+      return next;
+    });
+
+    // 3. Prune resolution from incident state so it cannot reappear
+    pruneIncidentMemory(id);
+
+    // 4. Update selection
+    if (selected?.id === id) {
+      const remaining = memories.filter((m) => m.id !== id);
+      if (remaining.length > 0) {
+        setSelected(remaining[0]);
+      } else {
+        setSelected(null);
+        setDetailOpen(false);
+      }
+    }
+
+    // 5. Call backend delete
     try {
       await api.memory.delete(id);
-      setServerMemories((prev) => prev.filter((m) => m.id !== id));
-      toast("Memory removed from Hindsight organizational bank");
-      setDetailOpen(false);
+      toast("Memory permanently removed from Hindsight organizational bank");
     } catch (err: any) {
-      setServerMemories((prev) => prev.filter((m) => m.id !== id));
-      toast("Memory pruned locally");
-      setDetailOpen(false);
+      toast("Memory permanently pruned locally");
     }
   };
 
