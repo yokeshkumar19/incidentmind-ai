@@ -55,6 +55,7 @@ def _map_incident_response(incident: Incident, db: Session) -> IncidentResponse:
     )
 
 
+@router.post("", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED, include_in_schema=False)
 @router.post("/", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED)
 def create_incident(
     incident_in: IncidentCreate,
@@ -76,6 +77,7 @@ def create_incident(
     return _map_incident_response(incident, db)
 
 
+@router.get("", response_model=List[IncidentResponse], include_in_schema=False)
 @router.get("/", response_model=List[IncidentResponse])
 def list_incidents(
     status: Optional[str] = Query(None, description="Filter by status (Investigating, Monitoring, Resolved)"),

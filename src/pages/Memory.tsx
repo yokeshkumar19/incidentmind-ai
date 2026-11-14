@@ -7,7 +7,13 @@ import { api } from "../api/client";
 export function Memory() {
   const { incidents, toast } = useApp();
   const fallbackMemories = incidents.filter((i) => i.resolution);
-  const [serverMemories, setServerMemories] = useState<any[]>([]);
+  const [serverMemories, setServerMemories] = useState<any[]>(() => {
+    try {
+      const cached = localStorage.getItem("incidentmind_memories_cache");
+      if (cached) return JSON.parse(cached);
+    } catch (_) {}
+    return [];
+  });
   const [query, setQuery] = useState("");
   const [service, setService] = useState("All services");
   const [selected, setSelected] = useState<any>(fallbackMemories[0]);
@@ -35,6 +41,9 @@ export function Memory() {
             };
           });
           setServerMemories(mapped);
+          try {
+            localStorage.setItem("incidentmind_memories_cache", JSON.stringify(mapped));
+          } catch (_) {}
           if (mapped[0]) setSelected(mapped[0]);
         }
       })

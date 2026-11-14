@@ -20,10 +20,11 @@ function resolveApiBaseUrl(): string {
     if (isLocal) {
       return `${window.location.protocol}//${window.location.hostname}:8000/api`;
     }
-    return `${window.location.origin}/api`;
+    // Direct production connection to Render FastAPI backend to avoid proxy double-slash rewrites
+    return "https://incidentmind-ai-pgxr.onrender.com/api";
   }
 
-  return "http://localhost:8000/api";
+  return "https://incidentmind-ai-pgxr.onrender.com/api";
 }
 
 export const API_BASE_URL = resolveApiBaseUrl();

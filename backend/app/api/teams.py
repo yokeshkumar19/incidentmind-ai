@@ -21,6 +21,7 @@ from backend.app.services.email_service import email_service
 router = APIRouter()
 
 
+@router.get("", response_model=List[TeamResponse], include_in_schema=False)
 @router.get("/", response_model=List[TeamResponse])
 def list_user_teams(
     current_user: User = Depends(get_current_user),
@@ -74,6 +75,7 @@ def get_active_team(
     )
 
 
+@router.post("", response_model=TeamResponse, status_code=status.HTTP_201_CREATED, include_in_schema=False)
 @router.post("/", response_model=TeamResponse, status_code=status.HTTP_201_CREATED)
 def create_team(
     team_in: TeamCreate,

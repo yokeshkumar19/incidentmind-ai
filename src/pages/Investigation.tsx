@@ -36,22 +36,31 @@ export function Investigation() {
 
   const incident = incidents.find((i) => i.id === selectedId) || incidents[0];
 
-  // Load previous investigation for selected incident
+  // Load previous investigation for selected incident with local persistence
   useEffect(() => {
     if (!selectedId) return;
     let active = true;
+
+    // Load instantly from localStorage cache on refresh
+    const cacheKey = `incidentmind_inv_${selectedId}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        setInvestigation(JSON.parse(cached));
+      }
+    } catch (_) {}
+
     api.investigations
       .list(selectedId)
       .then((list) => {
         if (active && Array.isArray(list) && list.length > 0) {
           setInvestigation(list[0]);
-        } else if (active) {
-          setInvestigation(null);
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify(list[0]));
+          } catch (_) {}
         }
       })
-      .catch(() => {
-        if (active) setInvestigation(null);
-      });
+      .catch(() => {});
     return () => {
       active = false;
     };
@@ -60,9 +69,13 @@ export function Investigation() {
   const run = async () => {
     if (!incident) return;
     setRunning(true);
+    const cacheKey = `incidentmind_inv_${incident.id}`;
     try {
       const result = await api.investigations.investigate(incident.id);
       setInvestigation(result);
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(result));
+      } catch (_) {}
       toast("AI investigation completed with Groq & Hindsight context");
     } catch (err: any) {
       toast(err.message || "Simulated analysis refreshed");

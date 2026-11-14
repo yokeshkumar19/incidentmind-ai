@@ -18,6 +18,7 @@ from backend.app.services.hindsight_service import hindsight_service
 router = APIRouter()
 
 
+@router.get("", response_model=List[MemoryRecordResponse], include_in_schema=False)
 @router.get("/", response_model=List[MemoryRecordResponse])
 def list_workspace_memories(
     service: Optional[str] = Query(None, description="Filter by service name"),

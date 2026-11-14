@@ -59,7 +59,16 @@ function mapBackendIncident(item: any): Incident {
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [incidents, setIncidents] = useState<Incident[]>(initialIncidents);
+  const [incidents, setIncidents] = useState<Incident[]>(() => {
+    try {
+      const cached = localStorage.getItem("incidentmind_cached_incidents");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (_) {}
+    return initialIncidents;
+  });
   const [backendConnected, setBackendConnected] = useState(false);
   const [activeTeam, setActiveTeam] = useState<any>(null);
   const [userTeams, setUserTeams] = useState<any[]>([]);
@@ -72,6 +81,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
   const [toasts, setToasts] = useState<Toast[]>([]);
 
+  // Automatically sync incidents to local cache whenever state updates
+  useEffect(() => {
+    try {
+      localStorage.setItem("incidentmind_cached_incidents", JSON.stringify(incidents));
+    } catch (_) {}
+  }, [incidents]);
+
   const toast = useCallback((message: string) => {
     const id = Date.now();
     setToasts((items) => [...items, { id, message }]);
@@ -81,8 +97,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshIncidents = useCallback(async () => {
     try {
       const data = await api.incidents.list();
-      if (Array.isArray(data) && data.length > 0) {
-        setIncidents(data.map(mapBackendIncident));
+      if (Array.isArray(data)) {
+        if (data.length > 0) {
+          const mappedBackend = data.map(mapBackendIncident);
+          setIncidents((current) => {
+            const backendIds = new Set(mappedBackend.map((b) => b.id));
+            const localOnly = current.filter((c) => !backendIds.has(c.id));
+            return [...mappedBackend, ...localOnly];
+          });
+        }
         setBackendConnected(true);
       }
     } catch (err) {
@@ -120,8 +143,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             }
             if (user) setCurrentUser(user);
             if (Array.isArray(teams)) setUserTeams(teams);
-            if (Array.isArray(incidentList) && incidentList.length > 0) {
-              setIncidents(incidentList.map(mapBackendIncident));
+            if (Array.isArray(incidentList)) {
+              if (incidentList.length > 0) {
+                const mappedBackend = incidentList.map(mapBackendIncident);
+                setIncidents((current) => {
+                  const backendIds = new Set(mappedBackend.map((b) => b.id));
+                  const localOnly = current.filter((c) => !backendIds.has(c.id));
+                  return [...mappedBackend, ...localOnly];
+                });
+              }
             }
           }
         }
@@ -307,6 +337,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.warn("Backend purgeIncidents fallback to local state:", err);
     }
     setIncidents([]);
+    try {
+      localStorage.removeItem("incidentmind_cached_incidents");
+    } catch (_) {}
     toast("All incidents have been purged from workspace");
   }, [toast]);
 
