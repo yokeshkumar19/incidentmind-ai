@@ -25,10 +25,33 @@ export function Team() {
   const [joining, setJoining] = useState(false);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("Engineer");
-  const [teamMembers, setTeamMembers] = useState<any[]>(defaultMembers);
+  const { toast, activeTeam, userTeams, switchTeam, isGuest, incidents, currentUser, joinTeam } = useApp();
+  const [teamMembers, setTeamMembers] = useState<any[]>(() => {
+    if (currentUser) {
+      return [
+        {
+          id: `member-${currentUser.id}`,
+          userId: currentUser.id,
+          email: currentUser.email,
+          name: currentUser.name || "Lead Engineer",
+          initials: (currentUser.name || "LE")
+            .split(" ")
+            .map((n: string) => n[0])
+            .join("")
+            .slice(0, 2)
+            .toUpperCase(),
+          role: activeTeam?.role || "Admin",
+          status: "Online",
+          incidents: 0,
+          resolved: 0,
+          color: "#FF5A1F",
+        },
+      ];
+    }
+    return defaultMembers;
+  });
   const [activeMenuMember, setActiveMenuMember] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const { toast, activeTeam, incidents, currentUser, joinTeam } = useApp();
 
   const resolved = useMemo(() => incidents.filter((i) => i.status === "Resolved"), [incidents]);
   const totalActions = incidents.length + resolved.length;
@@ -47,11 +70,19 @@ export function Team() {
 
   useEffect(() => {
     let active = true;
+
+    // If guest / unauthenticated, keep demo members
+    if (!currentUser && isGuest) {
+      setTeamMembers(defaultMembers);
+      return;
+    }
+
     api.teams
       .getMembers()
       .then((m) => {
-        if (active && Array.isArray(m) && m.length > 0) {
-          const colors = ["#FF5A1F", "#3155E7", "#6428C8", "#2A8F72"];
+        if (!active) return;
+        if (Array.isArray(m) && m.length > 0) {
+          const colors = ["#FF5A1F", "#3155E7", "#6428C8", "#2A8F72", "#E11D48", "#0284C7"];
           const mapped = m.map((item, idx) => ({
             id: item.id,
             userId: item.user_id,
@@ -70,13 +101,58 @@ export function Team() {
             color: colors[idx % colors.length],
           }));
           setTeamMembers(mapped);
+        } else if (currentUser) {
+          // If no other members returned, display current logged in user as leader
+          setTeamMembers([
+            {
+              id: `member-${currentUser.id}`,
+              userId: currentUser.id,
+              email: currentUser.email,
+              name: currentUser.name || "Lead Engineer",
+              initials: (currentUser.name || "LE")
+                .split(" ")
+                .map((n: string) => n[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase(),
+              role: activeTeam?.role || "Admin",
+              status: "Online",
+              incidents: 0,
+              resolved: 0,
+              color: "#FF5A1F",
+            },
+          ]);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!active) return;
+        if (currentUser) {
+          setTeamMembers([
+            {
+              id: `member-${currentUser.id}`,
+              userId: currentUser.id,
+              email: currentUser.email,
+              name: currentUser.name || "Lead Engineer",
+              initials: (currentUser.name || "LE")
+                .split(" ")
+                .map((n: string) => n[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase(),
+              role: activeTeam?.role || "Admin",
+              status: "Online",
+              incidents: 0,
+              resolved: 0,
+              color: "#FF5A1F",
+            },
+          ]);
+        }
+      });
+
     return () => {
       active = false;
     };
-  }, []);
+  }, [activeTeam?.id, currentUser?.id, currentUser?.email, currentUser?.name, isGuest]);
 
   // Close 3-dots popover on click outside
   useEffect(() => {
@@ -183,11 +259,27 @@ export function Team() {
   return (
     <div>
       <PageHeader
-        eyebrow={`Team workspace / ${activeTeam?.name || "Atlas SRE"}`}
+        eyebrow={`Team workspace / ${activeTeam?.name || (currentUser?.name ? `${currentUser.name.split(" ")[0]}'s Workspace` : "Atlas SRE")}`}
         title="Reliability is a team sport."
         description="See who is responding, how work moves, and the collective practice behind every recovery."
         action={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {userTeams && userTeams.length > 1 && (
+              <div className="flex items-center gap-1.5 rounded-2xl border-2 border-black/10 bg-white/70 dark:bg-black/30 px-3 py-1.5 dark:border-white/10">
+                <span className="text-xs font-bold opacity-60">Workspace:</span>
+                <select
+                  value={activeTeam?.id || ""}
+                  onChange={(e) => switchTeam(e.target.value)}
+                  className="bg-transparent text-xs font-black focus:outline-none cursor-pointer"
+                >
+                  {userTeams.map((t) => (
+                    <option key={t.id} value={t.id} className="dark:bg-[#1F2937] text-black dark:text-white">
+                      {t.name} {t.id === activeTeam?.id ? "(Active)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <button className="btn-secondary" onClick={copyInvite}>
               {copied ? <Check size={16} /> : <Copy size={16} />} Invite code: {inviteCode}
             </button>

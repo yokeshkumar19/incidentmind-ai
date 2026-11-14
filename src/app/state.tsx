@@ -88,7 +88,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (_) {}
     return null;
   });
-  const [userTeams, setUserTeams] = useState<any[]>([]);
+  const [userTeams, setUserTeams] = useState<any[]>(() => {
+    try {
+      const cached = localStorage.getItem("incidentmind_user_teams");
+      if (cached) return JSON.parse(cached);
+    } catch (_) {}
+    return [];
+  });
   const [currentUser, setCurrentUser] = useState<any>(() => {
     try {
       const cached = localStorage.getItem("incidentmind_user");
@@ -134,6 +140,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (_) {}
   }, [activeTeam]);
 
+  // Persist user teams so workspace lists never disappear on refresh
+  useEffect(() => {
+    try {
+      if (Array.isArray(userTeams) && userTeams.length > 0) {
+        localStorage.setItem("incidentmind_user_teams", JSON.stringify(userTeams));
+      }
+    } catch (_) {}
+  }, [userTeams]);
+
   const toast = useCallback((message: string) => {
     const id = Date.now();
     setToasts((items) => [...items, { id, message }]);
@@ -166,6 +181,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const teams = await api.teams.list();
       if (Array.isArray(teams)) {
         setUserTeams(teams);
+        try {
+          localStorage.setItem("incidentmind_user_teams", JSON.stringify(teams));
+        } catch (_) {}
       }
     } catch (_) {}
   }, []);
@@ -209,8 +227,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 localStorage.setItem("incidentmind_active_team", JSON.stringify(team));
                 localStorage.setItem("incidentmind_team_id", team.id);
               } catch (_) {}
+            } else if (Array.isArray(teams) && teams.length > 0) {
+              setActiveTeam(teams[0]);
+              try {
+                localStorage.setItem("incidentmind_active_team", JSON.stringify(teams[0]));
+                localStorage.setItem("incidentmind_team_id", teams[0].id);
+              } catch (_) {}
             }
-            if (Array.isArray(teams)) setUserTeams(teams);
+            if (Array.isArray(teams) && teams.length > 0) {
+              setUserTeams(teams);
+              try {
+                localStorage.setItem("incidentmind_user_teams", JSON.stringify(teams));
+              } catch (_) {}
+            }
             if (Array.isArray(incidentList)) {
               setIncidents(incidentList.map(mapBackendIncident));
             }
@@ -276,10 +305,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("incidentmind_team_id");
     localStorage.removeItem("incidentmind_user");
     localStorage.removeItem("incidentmind_active_team");
+    localStorage.removeItem("incidentmind_user_teams");
     sessionStorage.removeItem("incidentmind_guest");
     setIsGuest(false);
     setCurrentUser(null);
     setActiveTeam(null);
+    setUserTeams([]);
     toast("Signed out successfully");
   }, [toast]);
 
