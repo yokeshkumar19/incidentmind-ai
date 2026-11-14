@@ -80,9 +80,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return initialIncidents;
   });
   const [backendConnected, setBackendConnected] = useState(false);
-  const [activeTeam, setActiveTeam] = useState<any>(null);
+  const [activeTeam, setActiveTeam] = useState<any>(() => {
+    try {
+      const cached = localStorage.getItem("incidentmind_active_team");
+      if (cached) return JSON.parse(cached);
+    } catch (_) {}
+    return null;
+  });
   const [userTeams, setUserTeams] = useState<any[]>([]);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    try {
+      const cached = localStorage.getItem("incidentmind_user");
+      if (cached) return JSON.parse(cached);
+    } catch (_) {}
+    return null;
+  });
   const [isGuest, setIsGuest] = useState<boolean>(() => {
     return Boolean(sessionStorage.getItem("incidentmind_guest"));
   });
@@ -97,6 +109,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("incidentmind_cached_incidents", JSON.stringify(incidents));
     } catch (_) {}
   }, [incidents]);
+
+  // Persist current logged-in user so multiple refreshes never kick to demo user
+  useEffect(() => {
+    try {
+      if (currentUser) {
+        localStorage.setItem("incidentmind_user", JSON.stringify(currentUser));
+      } else {
+        localStorage.removeItem("incidentmind_user");
+      }
+    } catch (_) {}
+  }, [currentUser]);
+
+  // Persist active team so refreshes stay pinned to the team
+  useEffect(() => {
+    try {
+      if (activeTeam) {
+        localStorage.setItem("incidentmind_active_team", JSON.stringify(activeTeam));
+        localStorage.setItem("incidentmind_team_id", activeTeam.id);
+      } else {
+        localStorage.removeItem("incidentmind_active_team");
+      }
+    } catch (_) {}
+  }, [activeTeam]);
 
   const toast = useCallback((message: string) => {
     const id = Date.now();
@@ -134,41 +169,61 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (_) {}
   }, []);
 
-  // Initial load: probe backend health, team, user profile, and incidents
+  // Initial load: non-blocking parallel fetch of health, user profile, team, and incidents
   useEffect(() => {
     let mounted = true;
     async function init() {
-      try {
-        const health = await api.getHealth();
-        if (mounted && health?.status === "healthy") {
-          setBackendConnected(true);
-          const [team, user, incidentList, teams] = await Promise.all([
-            api.teams.getCurrent().catch(() => null),
-            api.auth.getMe().catch(() => null),
-            api.incidents.list().catch(() => null),
-            api.teams.list().catch(() => []),
-          ]);
-          if (mounted) {
+      const token = localStorage.getItem("incidentmind_token");
+
+      // Probe backend health in background
+      api.getHealth()
+        .then((health) => {
+          if (mounted && health?.status === "healthy") {
+            setBackendConnected(true);
+          }
+        })
+        .catch(() => {
+          if (mounted) setBackendConnected(false);
+        });
+
+      // If user has token, immediately load their authenticated profile and workspace data
+      if (token) {
+        Promise.all([
+          api.auth.getMe().catch(() => null),
+          api.teams.getCurrent().catch(() => null),
+          api.teams.list().catch(() => []),
+          api.incidents.list().catch(() => null),
+        ])
+          .then(([user, team, teams, incidentList]) => {
+            if (!mounted) return;
+            if (user) {
+              setCurrentUser(user);
+              try {
+                localStorage.setItem("incidentmind_user", JSON.stringify(user));
+              } catch (_) {}
+            }
             if (team) {
               setActiveTeam(team);
-              localStorage.setItem("incidentmind_team_id", team.id);
+              try {
+                localStorage.setItem("incidentmind_active_team", JSON.stringify(team));
+                localStorage.setItem("incidentmind_team_id", team.id);
+              } catch (_) {}
             }
-            if (user) setCurrentUser(user);
             if (Array.isArray(teams)) setUserTeams(teams);
             if (Array.isArray(incidentList)) {
-              if (incidentList.length > 0) {
-                const mappedBackend = incidentList.map(mapBackendIncident);
-                setIncidents((current) => {
-                  const backendIds = new Set(mappedBackend.map((b) => b.id));
-                  const localOnly = current.filter((c) => !backendIds.has(c.id));
-                  return [...mappedBackend, ...localOnly];
-                });
-              }
+              setIncidents(incidentList.map(mapBackendIncident));
             }
-          }
-        }
-      } catch {
-        if (mounted) setBackendConnected(false);
+          })
+          .catch(() => {});
+      } else {
+        // Unauthenticated or guest
+        api.incidents.list()
+          .then((list) => {
+            if (mounted && Array.isArray(list) && list.length > 0) {
+              setIncidents(list.map(mapBackendIncident));
+            }
+          })
+          .catch(() => {});
       }
     }
     init();
@@ -193,6 +248,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const loginUser = useCallback(async (token: string, user: any) => {
     localStorage.setItem("incidentmind_token", token);
+    localStorage.setItem("incidentmind_user", JSON.stringify(user));
     sessionStorage.removeItem("incidentmind_guest");
     setIsGuest(false);
     setCurrentUser(user);
@@ -204,10 +260,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ]);
       if (team) {
         setActiveTeam(team);
+        localStorage.setItem("incidentmind_active_team", JSON.stringify(team));
         localStorage.setItem("incidentmind_team_id", team.id);
       }
       if (Array.isArray(teams)) setUserTeams(teams);
-      if (Array.isArray(incidentList) && incidentList.length > 0) {
+      if (Array.isArray(incidentList)) {
         setIncidents(incidentList.map(mapBackendIncident));
       }
     } catch (_) {}
@@ -216,9 +273,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const logoutUser = useCallback(() => {
     localStorage.removeItem("incidentmind_token");
     localStorage.removeItem("incidentmind_team_id");
+    localStorage.removeItem("incidentmind_user");
+    localStorage.removeItem("incidentmind_active_team");
     sessionStorage.removeItem("incidentmind_guest");
     setIsGuest(false);
     setCurrentUser(null);
+    setActiveTeam(null);
     toast("Signed out successfully");
   }, [toast]);
 
