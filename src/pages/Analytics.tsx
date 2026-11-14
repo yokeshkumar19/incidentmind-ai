@@ -82,14 +82,13 @@ export function Analytics() {
       return summary.resolution_trend;
     }
     const resHours = resolvedIncidents.length > 0 ? 1.4 : 0.0;
-    return [
-      { month: "Jan", hours: 0.0, target: 2.0 },
-      { month: "Feb", hours: 0.0, target: 2.0 },
-      { month: "Mar", hours: 0.0, target: 2.0 },
-      { month: "Apr", hours: 0.0, target: 2.0 },
-      { month: "May", hours: 0.0, target: 2.0 },
-      { month: "Jun", hours: resHours, target: 2.0 },
-    ];
+    const allMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const currentMonthIdx = new Date().getMonth(); // 10 for November (0-indexed)
+    return allMonths.map((m, idx) => ({
+      month: m,
+      hours: idx === currentMonthIdx ? resHours : 0.0,
+      target: idx >= 6 ? 2.0 : 3.5,
+    }));
   }, [summary, resolvedIncidents.length]);
 
   // Dynamic Service Breakdown

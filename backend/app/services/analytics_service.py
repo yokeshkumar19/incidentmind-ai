@@ -105,15 +105,17 @@ class AnalyticsService:
             FrequencyDataPoint(week="W4", incidents=total, critical=critical, resolved=resolved),
         ]
 
-        # Resolution trend in hours (0.0 if no resolved incidents yet)
+        # Resolution trend in hours (Jan - Dec annual cycle)
         res_hours = 1.8 if resolved > 0 else 0.0
+        all_months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        current_m = datetime.now(timezone.utc).month  # 1-12
         resolution_trend = [
-            ResolutionTrendPoint(month="Jan", hours=0.0),
-            ResolutionTrendPoint(month="Feb", hours=0.0),
-            ResolutionTrendPoint(month="Mar", hours=0.0),
-            ResolutionTrendPoint(month="Apr", hours=0.0),
-            ResolutionTrendPoint(month="May", hours=0.0),
-            ResolutionTrendPoint(month="Jun", hours=res_hours),
+            ResolutionTrendPoint(
+                month=m,
+                hours=res_hours if idx == (current_m - 1) else 0.0,
+                target=2.0 if idx >= 6 else 3.5,
+            )
+            for idx, m in enumerate(all_months)
         ]
 
         # Memory counts

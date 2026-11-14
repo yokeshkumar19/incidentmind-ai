@@ -26,12 +26,18 @@ export const frequencyData = [
 ];
 
 export const resolutionTrend = [
-  { month: "Jan", hours: 0, target: 4 },
-  { month: "Feb", hours: 0, target: 4 },
-  { month: "Mar", hours: 0, target: 4 },
-  { month: "Apr", hours: 0, target: 4 },
+  { month: "Jan", hours: 0, target: 4.0 },
+  { month: "Feb", hours: 0, target: 4.0 },
+  { month: "Mar", hours: 0, target: 4.0 },
+  { month: "Apr", hours: 0, target: 4.0 },
   { month: "May", hours: 0, target: 3.5 },
   { month: "Jun", hours: 0, target: 3.5 },
+  { month: "Jul", hours: 0, target: 3.0 },
+  { month: "Aug", hours: 0, target: 3.0 },
+  { month: "Sep", hours: 0, target: 2.5 },
+  { month: "Oct", hours: 0, target: 2.5 },
+  { month: "Nov", hours: 0, target: 2.0 },
+  { month: "Dec", hours: 0, target: 2.0 },
 ];
 
 export const services = [
