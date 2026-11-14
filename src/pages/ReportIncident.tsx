@@ -241,14 +241,61 @@ export function ReportIncident() {
             </div>
           </fieldset>
           <div>
-            <label className="label" htmlFor="logs">
-              Error logs / diagnostics
-            </label>
+            <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
+              <label className="label mb-0" htmlFor="logs">
+                Error logs / diagnostics
+              </label>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-bold opacity-45">Quick 1-click sample:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForm({
+                      title: "Edge Gateway Buffer Overflow",
+                      description: "Factory edge sensor burst caused ring buffer to overflow and drop telemetry packets.",
+                      service: "Edge Gateway / MQTT",
+                      severity: "High",
+                      environment: "Industrial Floor",
+                      logs: "ERROR [EdgeGateway-04]: RingBuffer capacity exceeded (max 512KB, arrival 2048KB) - 500 telemetry packets dropped.",
+                    });
+                    setCustomService("");
+                    setCustomEnvironment("");
+                    setErrors({});
+                    toast("Loaded 1-line Edge Buffer Overflow sample!");
+                  }}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-[#FF5A1F]/15 text-[#FF5A1F] hover:bg-[#FF5A1F]/25 transition flex items-center gap-1"
+                >
+                  <Sparkles size={12} />
+                  <span>⚡ 1-Line Buffer Overflow</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForm({
+                      title: "Modbus RTU RS485 Clock Skew",
+                      description: "Baud rate clock drift caused CRC16 checksum mismatches on edge inverter bus.",
+                      service: "Modbus / RS-485 Serial",
+                      severity: "Critical",
+                      environment: "Industrial Floor",
+                      logs: "ERROR [Modbus-RTU]: CRC16 mismatch 0x4A1B != 0x9F3C on slave node #12 (baud 9600, 3 retries failed).",
+                    });
+                    setCustomService("");
+                    setCustomEnvironment("");
+                    setErrors({});
+                    toast("Loaded 1-line Modbus CRC sample!");
+                  }}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-[#3155E7]/15 text-[#3155E7] hover:bg-[#3155E7]/25 transition flex items-center gap-1"
+                >
+                  <Sparkles size={12} />
+                  <span>🔄 Modbus CRC</span>
+                </button>
+              </div>
+            </div>
             <div className="relative">
               <FileCode2 className="absolute left-4 top-4 opacity-35" size={18} />
               <textarea
                 id="logs"
-                rows={7}
+                rows={6}
                 className="field resize-y pl-11 font-mono text-xs"
                 value={form.logs}
                 onChange={(e) => update("logs", e.target.value)}
