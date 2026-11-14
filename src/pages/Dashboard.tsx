@@ -13,15 +13,15 @@ export function Dashboard() {
   const active = useMemo(() => incidents.filter((i) => i.status !== "Resolved"), [incidents]);
   const resolved = useMemo(() => incidents.filter((i) => i.status === "Resolved"), [incidents]);
   const critical = useMemo(
-    () => incidents.filter((i) => i.severity === "Critical" && i.status !== "Resolved"),
+    () => incidents.filter((i) => (i.severity || "").toLowerCase() === "critical" && i.status !== "Resolved"),
     [incidents],
   );
 
   const totalIncidents = incidents.length;
-  const criticalAll = incidents.filter((i) => i.severity === "Critical").length;
-  const highAll = incidents.filter((i) => i.severity === "High").length;
-  const medAll = incidents.filter((i) => i.severity === "Medium").length;
-  const lowAll = incidents.filter((i) => i.severity === "Low").length;
+  const criticalAll = incidents.filter((i) => (i.severity || "").toLowerCase() === "critical").length;
+  const highAll = incidents.filter((i) => (i.severity || "").toLowerCase() === "high").length;
+  const medAll = incidents.filter((i) => (i.severity || "").toLowerCase() === "medium").length;
+  const lowAll = incidents.filter((i) => (i.severity || "").toLowerCase() === "low").length;
 
   const severity = useMemo(() => {
     if (totalIncidents === 0) {
@@ -39,6 +39,14 @@ export function Dashboard() {
       { name: "Low", value: Math.round((lowAll / totalIncidents) * 100), count: lowAll, color: "#D6FF45" },
     ];
   }, [totalIncidents, criticalAll, highAll, medAll, lowAll]);
+
+  const pieData = useMemo(() => {
+    if (totalIncidents === 0) {
+      return [{ name: "No Active Risk", value: 1, count: 0, color: "rgba(255,255,255,0.12)" }];
+    }
+    const activeSlices = severity.filter((s) => s.count > 0);
+    return activeSlices.length > 0 ? activeSlices : [{ name: "Stable", value: 1, count: 0, color: "#2A8F72" }];
+  }, [totalIncidents, severity]);
 
   const categories = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -252,13 +260,13 @@ export function Dashboard() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={severity}
+                    data={pieData}
                     dataKey="value"
                     innerRadius={54}
                     outerRadius={82}
-                    paddingAngle={4}
+                    paddingAngle={totalIncidents === 0 ? 0 : 4}
                   >
-                    {severity.map((d) => (
+                    {pieData.map((d) => (
                       <Cell key={d.name} fill={d.color} />
                     ))}
                   </Pie>
@@ -268,9 +276,27 @@ export function Dashboard() {
               <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
                 <span>
                   <b className="block text-2xl font-black">
-                    {totalIncidents === 0 ? "0%" : `${severity[0].value}%`}
+                    {totalIncidents === 0
+                      ? "0"
+                      : criticalAll > 0
+                      ? `${severity[0].value}%`
+                      : highAll > 0
+                      ? `${severity[1].value}%`
+                      : medAll > 0
+                      ? `${severity[2].value}%`
+                      : `${totalIncidents}`}
                   </b>
-                  <small className="opacity-50 font-bold">critical</small>
+                  <small className="opacity-50 font-bold uppercase tracking-wider text-[10px]">
+                    {totalIncidents === 0
+                      ? "no active risk"
+                      : criticalAll > 0
+                      ? "critical"
+                      : highAll > 0
+                      ? "high risk"
+                      : medAll > 0
+                      ? "medium"
+                      : "incidents"}
+                  </small>
                 </span>
               </div>
             </div>

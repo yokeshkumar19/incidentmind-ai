@@ -42,12 +42,22 @@ type AppState = {
 
 const AppContext = createContext<AppState | null>(null);
 
+function normalizeSeverity(raw?: string): Severity {
+  if (!raw) return "Medium";
+  const s = String(raw).trim().toLowerCase();
+  if (s === "critical") return "Critical";
+  if (s === "high") return "High";
+  if (s === "medium") return "Medium";
+  if (s === "low") return "Low";
+  return "Medium";
+}
+
 function mapBackendIncident(item: any): Incident {
   return {
     id: item.id,
     title: item.title,
     service: item.affected_service || item.service || "General",
-    severity: item.severity as Severity,
+    severity: normalizeSeverity(item.severity),
     status: item.status as IncidentStatus,
     time: item.created_at ? new Date(item.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Recent",
     owner: item.reporter_name || "Maya Chen",
