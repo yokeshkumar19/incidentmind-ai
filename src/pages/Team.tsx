@@ -20,12 +20,15 @@ import { api } from "../api/client";
 
 export function Team() {
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [joinOpen, setJoinOpen] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [joining, setJoining] = useState(false);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("Engineer");
   const [teamMembers, setTeamMembers] = useState<any[]>(defaultMembers);
   const [activeMenuMember, setActiveMenuMember] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const { toast, activeTeam, incidents, currentUser } = useApp();
+  const { toast, activeTeam, incidents, currentUser, joinTeam } = useApp();
 
   const resolved = useMemo(() => incidents.filter((i) => i.status === "Resolved"), [incidents]);
   const totalActions = incidents.length + resolved.length;
@@ -133,6 +136,21 @@ export function Team() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleJoin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!joinCode.trim()) return toast("Please enter an invite code");
+    setJoining(true);
+    try {
+      await joinTeam(joinCode.trim());
+      setJoinOpen(false);
+      setJoinCode("");
+    } catch (err: any) {
+      toast(err.message || "Failed to join workspace");
+    } finally {
+      setJoining(false);
+    }
+  };
+
   const [sendingInvite, setSendingInvite] = useState(false);
 
   const invite = async (e: React.FormEvent) => {
@@ -169,9 +187,12 @@ export function Team() {
         title="Reliability is a team sport."
         description="See who is responding, how work moves, and the collective practice behind every recovery."
         action={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button className="btn-secondary" onClick={copyInvite}>
               {copied ? <Check size={16} /> : <Copy size={16} />} Invite code: {inviteCode}
+            </button>
+            <button className="btn-secondary" onClick={() => setJoinOpen(true)}>
+              Join another workspace
             </button>
             <button className="btn-primary" onClick={() => setInviteOpen(true)}>
               <Plus size={17} /> Invite member
@@ -407,6 +428,34 @@ export function Team() {
             </button>
             <button type="submit" disabled={sendingInvite} className="btn-primary">
               {sendingInvite ? "Sending..." : "Send invitation"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Join Workspace Modal */}
+      <Modal open={joinOpen} onClose={() => setJoinOpen(false)} title="Join another workspace">
+        <form onSubmit={handleJoin} className="space-y-4 pt-3">
+          <p className="text-sm opacity-60">
+            Enter the workspace invite code provided by your team lead to join their shared incidents and failure memory bank.
+          </p>
+          <div>
+            <label className="label">Invite Code</label>
+            <input
+              className="field uppercase tracking-wider font-mono font-bold"
+              type="text"
+              value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+              placeholder="e.g. ATLAS-2026"
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" className="btn-secondary" onClick={() => setJoinOpen(false)}>
+              Cancel
+            </button>
+            <button type="submit" disabled={joining} className="btn-primary">
+              {joining ? "Joining..." : "Join workspace"}
             </button>
           </div>
         </form>

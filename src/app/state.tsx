@@ -98,20 +98,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await api.incidents.list();
       if (Array.isArray(data)) {
-        if (data.length > 0) {
-          const mappedBackend = data.map(mapBackendIncident);
-          setIncidents((current) => {
-            const backendIds = new Set(mappedBackend.map((b) => b.id));
-            const localOnly = current.filter((c) => !backendIds.has(c.id));
-            return [...mappedBackend, ...localOnly];
-          });
-        }
+        const mappedBackend = data.map(mapBackendIncident);
+        setIncidents(mappedBackend);
         setBackendConnected(true);
       }
     } catch (err) {
       setBackendConnected(false);
     }
   }, []);
+
+  // Real-time multi-account team polling every 8 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshIncidents();
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [refreshIncidents]);
 
   const loadUserTeams = useCallback(async () => {
     try {
