@@ -138,7 +138,10 @@ class IncidentService:
     ) -> Investigation:
         incident = IncidentService.get_incident_by_id(db, team_id, incident_id)
         if not incident:
-            raise ValueError(f"Incident {incident_id} not found in workspace.")
+            # Fallback search by ID across database in case workspace context transitioned
+            incident = db.query(Incident).filter(Incident.id == incident_id).first()
+            if not incident:
+                raise ValueError(f"Incident {incident_id} not found in workspace.")
 
         # 1. Sanitize and extract diagnostic signals from logs
         log_signals = LogProcessor.analyze_logs(incident.error_logs)
